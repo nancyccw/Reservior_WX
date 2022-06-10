@@ -1,0 +1,33 @@
+public function login(){
+        $this->assign('root',$this->root);
+        return $this->fetch('public/login');
+    }
+ public function loginCheck()
+    {
+        $username = $_GET['username'];
+        $password = $_GET['password'];
+
+        $data = array();
+        $user = new user();
+        $result = $user->sel($username);
+
+        if($result['password'] == $password){
+            $data["success"] = true;
+        } else {
+            $data["success"] = false;
+        }
+        return json($data);
+    }
+
+    public function checkUser(){
+        $username = $_GET['username'];
+
+        $user = new user();
+        $result = $user->sel($username);
+
+        if($result > 0){
+            return 'ok';
+        }else{
+            return 'fail';
+        }
+    }

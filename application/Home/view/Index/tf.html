@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no">
+        <meta name="format-detection" content="telephone=no">
+        <title>台风路径图</title>
+        <link rel="stylesheet" href="__PUBLIC__/js/frozenui/css/frozen.css">
+        <link rel="stylesheet" href="__PUBLIC__/css/site.css">
+        <script src="__PUBLIC__/js/frozenui/lib/zepto.min.js"></script>
+        <script src="__PUBLIC__/js/frozenui/js/frozen.js"></script>
+        <script type="text/javascript" src="__PUBLIC__/js/jquery/jquery-2.0.3.min.js"></script>
+		<link rel="stylesheet" href="__PUBLIC__/js/leaflet/leaflet.css" />
+		<link rel="stylesheet" href="__PUBLIC__/js/leaflet/leaflet.label.css" />
+		<script type="text/javascript" src="__PUBLIC__/js/leaflet/leaflet.js"></script>
+		<script type="text/javascript" src="__PUBLIC__/js/leaflet/leaflet.label.js"></script>
+		<script type="text/javascript" src="__PUBLIC__/js/user.leaflet.js"></script>
+		<style>
+
+		</style>
+    </head>
+    
+    <body ontouchstart>
+        <section class="ui-container">
+		<div class="demo-block">
+			<div id="map"
+				 style="width: 100%;
+						margin-top:0px;
+						border: 1px solid gray;
+						overflow:hidden;">
+			</div>
+		</div>
+
+        </section><!-- /.ui-container-->
+        <script>
+		$(function(){
+			$("#map").height($(window).height());
+            var width = $(window).width();
+            initMap();
+            mapLoad();
+            var nowDate = new Date();
+            var year = nowDate.getFullYear();
+            var url = 'http://www.tqyb.com.cn/data/typhoon/'+year+'/index.js?random='+Math.random();
+            $.getScript(url,function (){
+                eval('var data = gz_typhoon'+year+'list');
+                var tsid = data[0].tsid;
+				var tscname = data[0].tscname;
+                url = 'http://www.tqyb.com.cn/data/typhoon/'+year+'/'+tsid+'.js?random='+Math.random();
+                $.getScript(url,function (){
+                    eval('var sub = gz_typhoon'+tsid);
+                    var myIcon = L.icon({
+                        iconUrl: '__PUBLIC__/images/green-point.png',
+                        iconSize: [11, 11]
+                    });
+                    var latlngs1 = [];
+                    var latlngs2 = [];
+                    $.each(sub.obs,function (index,value) {
+                        /*
+                         "ddatetime": "2016年05月26日 14时00分",
+                         "tcrank": "TD",
+                         "latitude": 18.799999,
+                         "longitude": 114.9,
+                         "windspeed": 12.0,
+                         "gust": 17.0,
+                         "direction": ""
+                         */
+                        latlngs1.push({lat: value.latitude, lon: value.longitude});
+                        var marker = L.marker([value.latitude,value.longitude], {icon: myIcon}).addTo(map);
+                        marker.bindPopup(
+                                '时间：'+value.ddatetime+'<br>' +
+                                '名称：'+tscname+'<br>' +
+                                '北纬：'+value.latitude+' 度<br>' +
+                                '东经：'+value.longitude+' 度<br>' +
+                                '中心气压：'+value.pressure+' 百帕' +'<br>' +
+                                '中心风速：'+value.windspeed+' 米/秒');
+                    });
+                    latlngs2.push(latlngs1[0]);
+                    $.each(sub.BCGZ,function (index,value) {
+                        latlngs2.push({lat: value.latitude, lon: value.longitude});
+                        var marker = L.marker([value.latitude,value.longitude], {icon: myIcon}).addTo(map);
+                        marker.bindPopup(
+                                '时间：'+value.ddatetime+'<br>' +
+                                '名称：'+tscname+'<br>' +
+                                '北纬：'+value.latitude+' 度<br>' +
+                                '东经：'+value.longitude+' 度<br>' +
+                                '中心气压：'+value.pressure+' 百帕' +'<br>' +
+                                '中心风速：'+value.windspeed+' 米/秒');
+                    });
+                    L.polyline(latlngs1, {color: 'black',
+                            weight: 3,
+                            fill: false }
+                    ).addTo(map);
+                    L.polyline(latlngs2, {color: 'black',
+                        dashArray: '5, 5',
+                        weight: 2,
+                        fill: false }
+                    ).addTo(map);
+                });
+            });
+		});
+
+		//初始化地图
+		function mapLoad() {
+			createDIV();
+			showMap();
+		}
+
+		//创建回到中心点Div
+		function createDIV() {
+			var num = 0;
+			num =num+7;
+			var gg =  document.getElementById("map");
+			var div = document.createElement("div");
+			div.id = "origin";
+			div.style.top= "82%";
+			div.style.left = num+"px";
+			div.style.height = "20px";
+			div.style.width = "20px";
+			div.style.zIndex = "1000000";
+			div.style.position = "absolute";
+			var imgurl = "__PUBLIC__/js/leaflet/images/location.png";
+			div.innerHTML = "<img id='chufa' onclick='returnOrigin()' src="+imgurl+">";
+			gg.appendChild(div);
+		}
+
+		//回到原点方法
+		function returnOrigin() {
+			var lttd = {$data.LTTD};
+			var lgtd = {$data.LGTD};
+			map.setView([lttd,lgtd], 6);
+		}
+
+		//可提取
+		function initMap() {
+			var localLayer =  L.user.basemapLayer('Local');
+			var imageryLayer =  L.user.basemapLayer('Imagery');
+			var streetsLayer =  L.user.basemapLayer('Streets');
+			var vectorLayer = [];
+			map = L.map('map',{layers: [streetsLayer]});
+			var baseLayers = {
+				"街道图": streetsLayer,
+				"影像图": imageryLayer
+			   // "本地图": localLayer
+			};
+			L.control.layers(baseLayers,null).addTo(map);
+			L.control.scale().addTo(map);
+			
+			map.on('zoomstart', function(e) {
+				if(typeof(e.target._zoom)!='undefined'){
+					setVectorLayer(e.target._zoom < 9);
+				}
+			});
+
+            var lttd = {$data.LTTD};
+            var lgtd = {$data.LGTD};
+			var centerLatLng = L.latLng( lttd, lgtd);
+		
+			function setVectorLayer(flag)
+			{
+				if(!flag && vectorLayer.length > 0 && map.hasLayer(vectorLayer[0]))
+				{
+					$.each(vectorLayer, function(index, value){
+						map.removeLayer(value);
+					});
+				}
+				else if(flag && (vectorLayer.length == 0 || ( vectorLayer.length > 0 && !map.hasLayer(vectorLayer[0]))))
+				{
+					vectorLayer[0] = L.circle(centerLatLng, 100000, {
+						color: 'red',
+						dashArray: '5, 5',
+						weight: 3,
+						className: 'ttt',
+						fill: false
+					}).addTo(map);
+					vectorLayer[1] = L.circle(centerLatLng, 300000, {
+						color: 'yellow',
+						dashArray: '5, 5',
+						weight: 2,
+						fill: false
+					}).addTo(map);
+					vectorLayer[2] = L.circle(centerLatLng, 500000, {
+						color: 'green',
+						dashArray: '5, 5',
+						weight: 2,
+						fill: false
+					}).addTo(map);
+				}
+			}
+			setVectorLayer(true);
+
+			var dist = centerLatLng.distanceTo([lttd+1, lgtd+1]);
+			var oneUnit = 1 / dist;
+			var label100 = new L.Label();
+			label100.setContent("100 KM");
+			label100.setLatLng([lttd - 100000 * oneUnit, lgtd + 100000 * oneUnit]);
+			map.showLabel(label100);
+			var label300 = new L.Label();
+			label300.setContent("300 KM");
+			label300.setLatLng([lttd - 300000 * oneUnit, lgtd + 300000 * oneUnit]);
+			map.showLabel(label300);
+			var label500 = new L.Label();
+			label500.setContent("500 KM");
+			label500.setLatLng([lttd - 500000 * oneUnit, lgtd + 500000 * oneUnit]);
+			map.showLabel(label500);
+		}
+
+		//单站初始化地图消息
+		//声明变量map、layer、url
+		function showMap() {
+			var lttd = {$data.LTTD};
+			var lgtd = {$data.LGTD};
+			map.setView([lttd,lgtd], 6);
+			//var marker = L.marker([lttd,lgtd]).bindLabel("<b>{$data.CSTNM}</b>", { noHide: true }).addTo(map);
+			//marker.bindPopup("<b>托口</b>");
+		}
+        </script>
+    </body>
+</html>

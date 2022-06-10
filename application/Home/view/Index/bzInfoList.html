@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no">
+    <meta name="format-detection" content="telephone=no">
+    <title>{$info['bz_type']}信息</title>
+    <link rel="stylesheet" charset="utf-8" href="/public/static/js/frozenui/css/frozen.css">
+    <link rel="stylesheet" href="__PUBLIC__css/site.css">
+    <link rel="stylesheet" href="__PUBLIC__font-awesome/css/font-awesome.min.css">
+    <script src="__PUBLIC__js/frozenui/lib/zepto.min.js"></script>
+    <script src="__PUBLIC__js/frozenui/js/frozen.js"></script>
+    <style>
+        .image-show{
+            width: 18px;
+            height: 12px;
+        }
+        .image-show_unit{
+            width: 18px;
+            height: 18px;
+        }
+        .ui_csd{
+            text-align: center;
+            color: black;
+            font-size: 10px;
+        }
+        .ui-nowrap span{
+            color:black;
+        }
+    </style>
+</head>
+
+<body ontouchstart>
+<section class="ui-container">
+
+    <section id="list">
+
+        <div class="demo-item">
+            <div class="demo-block" style="background-color:#EEEEEE">
+                <ul class="ui-list ui-border-tb">
+                    <li class="ui-border-t" style="padding:10px 30% 10px 30%;text-align: center;">
+                       <h3 style="font-weight: bold">农历：{$info['time']['newNL']}</h3>
+                    </li>
+                    <li class="ui-border-t title_li" style="margin: 0">
+                        <div class="ui-list-info title" style="width:100px;">
+                            <h4><b>泵站</b></h4>
+                        </div>
+                        <div class="ui-list-info title">
+                            <h4 class="ui-nowrap"><b>详细信息</b></h4>
+                        </div>
+                        <div class="ui-list-info title" style="width:80px;">
+                            <h4><b>操作</b></h4>
+                        </div>
+                    </li>
+                    {volist name="list" id="vo"}
+                    <li class="ui-border-t ui-background-color" style="margin-top: 0px">
+                        <div class="ui-list-info content" style="width:100px; -webkit-box-pack:inherit; -webkit-box-flex:0; text-align: center;padding-left: 5px">
+                            <h5 style="color: #ffffff; background-color:#2C97C5; width: 100%;margin-top: 0px;border-radius: 5px"><b>{$vo['bz_name']}</b></h5>
+                            <h6 style="text-align: left;"><img src="__PUBLIC__images/time.png" style="width: 15px; margin: 4px 8px" />{$info['time']['timestamp']|date="Y-m-d",###}</h6>
+                            <h6>{$info['time']['timestamp']|date="H:i",###}</h6>
+                        </div>
+                        <div class="ui-list-info content" style="-webkit-box-pack:inherit;padding-left: 5px">
+                            {switch name="$info['bz_type']"}
+                                {case value="引排水泵站"}
+                                    {if condition="$vo['NJSW'] neq ''"}
+                                       <span class="ui-nowrap">内江：<span style="font-weight: bold">{$vo['NJSW']}</span> m</span>
+                                    {/if}
+                                    {if condition="$vo['WJSW'] neq ''"}
+                                        <span class="ui-nowrap">外江：<span style="font-weight: bold">{$vo['WJSW']}</span> m</span>
+                                     {/if}
+                                    {if condition="$vo['QCSW'] neq ''"}
+                                         <span class="ui-nowrap">前池：<span style="font-weight: bold">{$vo['QCSW']}</span> m</span>
+                                    {/if}
+                                {/case}0
+                                {case value="隧道泵站|其他泵站|污水泵站|市政泵站"}
+                                    {if condition="($vo['NJSW'] neq '') AND ($vo['WJSW'] eq '')"}
+                                        <span class="ui-nowrap" style="margin-top: 10px">水池：
+                                            <span style="font-weight: bold">{$vo['NJSW']}</span> m
+                                        </span>
+                                    {/if}
+                                    {if condition="($vo['NJSW'] neq '') AND ($vo['WJSW'] neq '')"}
+                                    <span class="ui-nowrap" style="margin-top: 10px">水池1：
+                                        <span style="font-weight: bold">{$vo['NJSW']}</span> m
+                                    </span>
+                                    {/if}
+                                    {if condition="$vo['WJSW'] neq ''"}
+                                        <span class="ui-nowrap">水池2：
+                                            <span style="font-weight: bold">{$vo['WJSW']}</span> m
+                                        </span>
+                                    {/if}
+                                    {if condition="$vo['QCSW'] neq ''"}
+                                    <span class="ui-nowrap">水池：
+                                        <span style="font-weight: bold">{$vo['QCSW']}</span> m
+                                    </span>
+                                    {/if}
+                                {/case}
+                            {case value="测水点"}
+                                        <p class="ui-nowrap ui_csd" style="margin-top: 12px">当前水位：
+                                            <span style="font-weight: bold">{$vo['NJSW']}</span> m
+                                        </p>
+                            {if condition="$vo['bz_name'] eq '江湾立交测水点'"}
+                                    <p class="ui-nowrap ui_csd">警戒水位：
+                                        <span style="font-weight: bold">1.30 </span> m
+                                    </p>
+                            {/if}
+                            {if condition="$vo['bz_name'] eq '同济路金马测水点'"}
+                                    <p class="ui-nowrap ui_csd">警戒水位：
+                                        <span style="font-weight: bold">2.20 </span> m
+                                    </p>
+                            {/if}
+                            {if condition="$vo['bz_name'] eq '陶瓷城测水点'"}
+                                    <p class="ui-nowrap ui_csd">警戒水位：
+                                        <span style="font-weight: bold">2.20 </span> m
+                                    </p>
+                            {/if}
+                            {if condition="$vo['bz_name'] eq '港口路测水点'"}
+                            <p class="ui-nowrap ui_csd">警戒水位：
+                                <span style="font-weight: bold">2.20 </span> m
+                            </p>
+                            {/if}
+
+                            {/case}
+                            {/switch}
+                            {if condition="$info['bz_type'] neq '测水点'"}
+                            <div class="ui-nowrap">机组:
+                                {volist name="vo['UNIT']" id="sub"}
+                                {if condition="($sub eq 1) && ($sub neq null)"}<img class="image-show_unit"  src="__PUBLIC__images/unit_close.png" />{/if}{if condition="($sub eq 0) && ($sub neq null)"}<img class="image-show_unit" src="__PUBLIC__images/unit_open.png" />{/if}
+                                {/volist}
+                            </div>
+                            {/if}
+                            {if condition="$info['bz_type'] eq '引排水泵站'"}
+                                <div class="ui-nowrap">闸门:
+                                    {volist name="vo['STROBE']" id="sub"}
+                                     {if condition="($sub == 0) AND ($sub != null)"}<img class="image-show" src="__PUBLIC__images/strobe_open1.png" />{/if}
+                                    {if condition="($sub == 1) OR ($sub == null)"}<img class="image-show" src="__PUBLIC__images/strobe_close1.png" />{/if}
+                                    {/volist}
+                                    {volist name="vo['FLOOD_STROBE']" id="sub"}
+                                     {if condition="($sub == 0) AND ($sub != null)"}<img class="image-show" src="__PUBLIC__images/strobe_open1.png" />{/if}
+                                    {if condition="($sub == 1) OR ($sub == null)"}<img class="image-show" src="__PUBLIC__images/strobe_close1.png" />{/if}
+                                    {/volist}
+                                    <!--<if condition="$sub eq 1"><label class="ui-label-s  ui-label-s-o">开</label></if><if condition="$sub eq 0"><label class="ui-label-s ui-label-s-c">关</label></if>-->
+                                </div>
+                            {/if}
+                        </div>
+                        <div class="ui-list-info content" style="-webkit-box-flex:0;">
+                            <div style="text-align: center;">
+                                <a href="/public/index.php/home/index/chart.html?bz_name={$vo['bz_name']}"><img src="__PUBLIC__images/tendency.png" style="margin: 2px 5px;width: 25px"/></a>
+                            </div>
+                            <!--<div style="text-align: center;">-->
+                            <!--<a href="/public/index.php/home/index/chart1.html?bz_name={$vo['bz_name']}"><i class="fa fa-2x fa-trello" style="color:#555C6C; margin: 2px 8px;"></i></a>-->
+                            <!--</div>-->
+                            <div style="text-align: center;">
+                                <a href="/public/index.php/home/index/map.html?bz_name={$vo['bz_name']}"><img src="__PUBLIC__images/map.png" style="margin: 2px 5px;width: 25px"/></i></a>
+                            </div>
+                        </div>
+                    </li>
+                    {/volist}
+                </ul>
+            </div>
+        </div>
+
+    </section>
+
+
+
+</section><!-- /.ui-container-->
+<script>
+//    $('.ui-list li,.ui-tiled li').click(function(){
+//        if($(this).data('href')){
+//            location.href= $(this).data('href');
+//        }
+//    });
+//    $('.ui-header .ui-btn').click(function(){
+//        location.href= 'index.html';
+//    });
+</script>
+</body>
+</html>

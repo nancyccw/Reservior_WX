@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="format-detection" content="telephone=no">
+<title>登录</title>
+	<link rel="stylesheet" href="__PUBLIC__js/frozenui/css/frozen.css">
+	<link rel="stylesheet" type="text/css" href="__PUBLIC__css/login.css" media="screen" />
+	<link rel="stylesheet" href="__PUBLIC__/font-awesome/css/font-awesome.min.css">
+	<script src="__PUBLIC__/js/frozenui/lib/zepto.min.js"></script>
+	<script src="__PUBLIC__/js/frozenui/js/frozen.js"></script>
+	<script type="text/javascript" src="__PUBLIC__/js/common.js"></script>
+	<script type="text/javascript">
+		jQuery = $;
+	</script>
+	<script type="text/javascript" src="__PUBLIC__/js/jquery/jquery.cookie.js"></script>
+</head>
+<body>
+<div class="wrap">
+	<div id="content">
+		<div id="main">
+			<div class="full_w">
+				<form method="post">
+					<label for="user">用户帐号:</label>
+					<input id="user"  name="username" class="text"/>
+					<label for="pass">密码:</label>
+					<input id="pass"  type="password" name="password" class="text"/>
+					<div class="form-actions">
+						<label class="checkbox"> <div class="checker"><span><input type="checkbox" class="uniform" id="ck_rmbUser"  value=""></span></div> 下次自动登录</label>
+					</div>
+					<button type="button" id="form_submit" class="ui-btn-lg ui-btn-primary ok">登录</button>
+
+				</form>
+			</div>
+			<div class="footer_t">&raquo; 禅城信息群发登陆</div>
+		</div>
+	</div>
+</div>
+<div id="load" class="ui-loading-block hide">
+	<div class="ui-loading-cnt">
+		<i class="ui-loading-bright"></i>
+		<p>正在加载中...</p>
+	</div>
+</div>
+</body>
+
+<script type="text/javascript">
+//	$('#form_submit').bind('click',check_login);
+
+	$(function () {
+		if ($.cookie("rmbUser") == "true") {
+			$("#ck_rmbUser").prop("checked", true);
+			$("#user").val($.cookie("username"));
+			//$("#password").remove();
+			//$("#pass").append("<input id='password' type='password' class='txt2'/>");
+			$("#pass").val($.cookie("password"));
+		}
+		$("#form_submit").tap(function(){
+			if(check()){
+				login();
+			}
+		});
+	});
+
+	function check(){
+		var username = $("#user").val();
+		var password = $("#pass").val();
+		if(username == "" || username == "请输入用户名"){
+			$.tips({
+				content:'请输入用户名',
+				stayTime:2000,
+				type:"warn"
+			});
+			$("#user").focus();
+			return false;
+		}
+		if(password == "" || password == "请输入密码"){
+			$.tips({
+				content:'请输入密码',
+				stayTime:2000,
+				type:"warn"
+			});
+			$("#pass").focus();
+			return false;
+		}
+		$("#tip").text("");
+		return true;
+	}
+
+	//记住用户名密码
+	function save() {
+		if ($("#ck_rmbUser").prop("checked")) {
+			var username = $("#user").val();
+			var password = $("#pass").val();
+			$.cookie("rmbUser", "true", { expires: 7 }); //存储一个带7天期限的cookie
+			$.cookie("username", username, { expires: 7 });
+			$.cookie("password", password, { expires: 7 });
+		}else{
+			$.cookie("rmbUser", "false", { expire: -1 });
+			$.cookie("username", "", { expires: -1 });
+			$.cookie("password", "", { expires: -1 });
+		}
+	};
+
+	function login(){
+		$('#load').addClass('show');
+		url = '{$data["root"]}/public/index.php/Service/index/loginCheck';
+		var data = [];
+		$.ajax({
+			type: 'POST',
+			url: url,
+			data:{username:$("#user").val(),password:$("#pass").val()},
+			dataType:'json',
+			success: function (data){
+				//登录成功则保存帐号密码
+				save();
+				if(data['success']){
+					window.location.href= "https://open.weixin.qq.com/connect/oauth2/authorize?appid={$data['appid']}&redirect_uri={$data['root']}/public/index.php/Home/index/UploadMaterial&response_type=code&scope=snsapi_userinfo&agentid={$data['Agentld']}&state=1#wechat_redirect";
+				}
+				if(!data['success']){
+					$.tips({
+						content: '帐号或密码错误！',
+						stayTime:2000,
+						type:"warn"
+					});
+					$('#load').removeClass('show');
+					$('#load').addClass('hide');
+					return false;
+				}
+
+			},
+			error: function(XMLHttpRequest, textStatus, errorThrown) {
+				$('#load').removeClass('show');
+				$('#load').addClass('hide');
+				confirm('网络错误！');
+
+			}
+		});
+	}
+</script>
+</html>

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no">
+    <meta name="format-detection" content="telephone=no">
+    <title>闸门工情</title>
+    <link rel="stylesheet" charset="utf-8" href="/public/static/js/frozenui/css/frozen.css">
+    <link rel="stylesheet" href="__PUBLIC__css/site.css">
+    <link rel="stylesheet" href="__PUBLIC__font-awesome/css/font-awesome.min.css">
+    <script src="__PUBLIC__js/frozenui/lib/zepto.min.js"></script>
+    <script src="__PUBLIC__js/frozenui/js/frozen.js"></script>
+    <style>
+        .image-show{
+            width: 18px;
+            height: 12px;
+        }
+        .image-show_unit{
+            width: 18px;
+            height: 18px;
+        }
+        .ui_csd{
+            text-align: center;
+            color: black;
+            font-size: 10px;
+        }
+        .ui-nowrap span{
+            color:black;
+        }
+    </style>
+</head>
+
+<body ontouchstart>
+<section class="ui-container">
+    <section id="list">
+        <div class="demo-item">
+            <div class="demo-block" style="background-color:#EEEEEE">
+                <ul class="ui-list ui-border-tb">
+                      <li class="ui-border-t title_li" style="margin: 0">
+                        <div class="ui-list-info title" style="width:100px;">
+                            <h4><b>闸门</b></h4>
+                        </div>
+                        <div class="ui-list-info title">
+                            <h4 class="ui-nowrap"><b>详细信息</b></h4>
+                        </div>
+                    </li>
+                    {volist name="list" id="vo"}
+                    <li class="ui-border-t ui-background-color" style="margin-top: 0px">
+                        <div class="ui-list-info content" style="width:100px; -webkit-box-pack:inherit; -webkit-box-flex:0; text-align: center;padding-left: 5px">
+                            <h5 style="color: #ffffff; background-color:#2C97C5; width: 100%;margin-top: 0px;border-radius: 5px"><b>{$vo['ZM_ID']}</b></h5>
+                            <h6 style="text-align: left;"><img src="__PUBLIC__images/time.png" style="width: 15px; margin: 4px 8px" />{$vo['DT']|date="Y-m-d",###}</h6>
+                            <h6>{$vo['DT']|date="H:i",###}</h6>
+                        </div>
+                        <div class="ui-list-info content" style="-webkit-box-pack:inherit;padding-right: 10px;text-align: right">
+                            <span class="ui-nowrap">开度：<span style="font-weight: bold">{$vo['ZM_KD']}</span> m</span>
+                            <span class="ui-nowrap">流量：<span style="font-weight: bold">{$vo['ZM_LL']}</span> m <sup>3</sup>/s</span>
+                            <div class="ui-nowrap">闸门:
+                                {if condition="($vo['ZM_KD'] > 0.05)"}<img class="image-show" src="__PUBLIC__images/strobe_open1.png" />{/if}
+                                {if condition="($vo['ZM_KD'] <= 0.05)"}<img class="image-show" src="__PUBLIC__images/strobe_close1.png" />{/if}
+                            </div>
+                        </div>
+                    </li>
+                    {/volist}
+                </ul>
+            </div>
+        </div>
+    </section>
+</section>
+</body>
+</html>

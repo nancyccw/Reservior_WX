@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no">
+    <meta name="format-detection" content="telephone=no">
+    <meta charset="UTF-8">
+    <title>预警信息列表</title>
+    <link rel="stylesheet" href="__PUBLIC__js/frozenui/css/frozen.css">
+    <link rel="stylesheet" href="__PUBLIC__font-awesome/css/font-awesome.min.css">
+    <link rel="stylesheet" href="__PUBLIC__bootstrap3/css/bootstrap.min.css">
+    <style type="text/css">
+
+        header{
+            background-color: #1668F2;
+        }
+        .warning_title{
+            color: #FFFFFF;
+            background-color: #3CA3DA;
+        }
+        .warning_num{
+            color: #FFFFFF;
+            font-size: 15px;
+            font-weight: bold;
+        }
+        h5{
+            text-indent:2em;
+            font-size: 15px;
+        }
+        a{
+            font-weight: bold;
+            text-decoration: none;
+            border-bottom: 1px solid #00a5e0;
+        }
+        .ui-list>li{
+            border-bottom: 1px solid #E5E5E5;
+            margin-left: 0px;
+        }
+       .ui-border-b{
+           margin: 0px;
+       }
+        .margin_small{
+            text-align: center;
+        }
+
+    </style>
+</head>
+
+<body>
+<section class="ui-selector">
+    <header class="ui-border-b">
+        <h4 style="color: #FFFFFF;">禅城区泵站预警列表</h4>
+    </header>
+    <div class="ui-selector-content">
+        <ul>
+            <li class="ui-selector-item">
+                <h3 class="ui-border-b warning_title" id="Drainage_BZ" onclick="show_warning(this.id);">
+                    <p>引排水泵站预警信息</p><span class="ui-txt-info warning_num">{$info['num']['Drainage_BZ_num']}</span>
+                </h3>
+                <ul class="ui-list ui-border-b">
+                    {volist name="Drainage_BZ" id="d_bz"}
+                    <li>
+                        <div class="ui-avatar-s" style="margin-top: 20px;margin-left: 10px;">
+                            <span><img src=""></span>
+                        </div>
+                        <div class="ui-list-info ui-border-t">
+                            <h5>{$d_bz['content']}</h5>
+                            <label style="color: #888888;font-size: 14px;">{$d_bz['timestamp']}</label>
+                            <label style="color: #888888;font-size: 14px;float: right"><a href="/public/index.php/home/index/chart.html?bz_name={$d_bz['bz_name']}">趋势图</a></label>
+                        </div>
+                    </li>
+                    {/volist}
+                </ul>
+            </li>
+            <li class=" ui-selector-item">
+                <h3 class="ui-border-b warning_title" id="Tunnel_BZ" onclick="show_warning(this.id);">
+                    <p>隧道泵站预警信息</p><span class="ui-txt-info warning_num">{$info['num']['Tunnel_BZ_num']}</span>
+                </h3>
+                <ul class="ui-list ui-border-b">
+                    {volist name="Tunnel_BZ" id="t_bz"}
+                    <li>
+                        <div class="ui-avatar-s" style="margin-top: 20px;margin-left: 10px;">
+                            <span><img src=""></span>
+                        </div>
+                        <div class="ui-list-info ui-border-t">
+                            <h4>{$t_bz['content']}</h4>
+                            <label style="color: #888;font-size: 14px;">{$t_bz['timestamp']}</label>
+                            <label style="color: #888;font-size: 14px;float: right"><a href="/public/index.php/home/index/chart.html?bz_name={$t_bz['bz_name']}">趋势图</a></label>
+                        </div>
+                    </li>
+                    {/volist}
+                </ul>
+            </li>
+            <li class=" ui-selector-item active" >
+                <h3 class="ui-border-b warning_title" id="Other_BZ" onclick="show_warning(this.id);">
+                    <p>其他泵站预警信息</p><span class="ui-txt-info warning_num">{$info['num']['Other_BZ_num']}</span>
+                </h3>
+                <ul class="ui-list ui-border-b">
+                    {volist name="Other_BZ" id="o_bz"}
+                    <li>
+                        <div class="ui-avatar-s" style="margin-top: 20px;margin-left: 10px;">
+                            <span><img src=""></span>
+                        </div>
+                        <div class="ui-list-info ui-border-t">
+                            <h4>{$o_bz['content']}</h4>
+                            <label style="color: #888;font-size: 14px;">{$o_bz['timestamp']}</label>
+                            <label style="color: #888;font-size: 14px;float: right"><a href="/public/index.php/home/index/chart.html?bz_name={$o_bz['bz_name']}">趋势图</a></label>
+                        </div>
+                    </li>
+                    {/volist}
+                </ul>
+            </li>
+        </ul>
+    </div>
+</section>
+<div class="page_info margin_small">{$info['page']}</div>
+
+</body>
+<script src="__PUBLIC__js/frozenui/lib/zepto.min.js"></script>
+<script src="__PUBLIC__js/frozenui/js/frozen.js"></script>
+<script type="text/javascript">
+
+
+   function show_warning(objId){
+       $('#'+objId).parent('.ui-selector-item').addClass('active');
+       $('#'+objId).parent('.ui-selector-item').siblings().removeClass('active');
+   }
+</script>
+</html>

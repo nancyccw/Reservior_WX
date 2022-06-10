@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no">
+    <meta name="format-detection" content="telephone=no">
+    <title>降雨信息</title>
+    <link rel="stylesheet" href="__PUBLIC__/js/frozenui/css/frozen.css">
+    <link rel="stylesheet" href="__PUBLIC__/css/site.css">
+    <script src="__PUBLIC__/js/frozenui/lib/zepto.min.js"></script>
+    <script src="__PUBLIC__/js/frozenui/js/frozen.js"></script>
+    <script type="text/javascript" src="__PUBLIC__/js/echart/echarts.min.js"></script>
+
+    <script type="text/javascript" src="__PUBLIC__/js/mobiscroll/js/mobiscroll.zepto.js"></script>
+    <script type="text/javascript" src="__PUBLIC__/js/mobiscroll/js/mobiscroll.core.js"></script>
+    <script type="text/javascript" src="__PUBLIC__/js/mobiscroll/js/mobiscroll.scroller.js"></script>
+
+    <script type="text/javascript" src="__PUBLIC__/js/mobiscroll/js/mobiscroll.datetime.js"></script>
+    <script type="text/javascript" src="__PUBLIC__/js/mobiscroll/js/mobiscroll.select.js"></script>
+    <script src="__PUBLIC__/js/mobiscroll/js/mobiscroll.scroller.ios.js" type="text/javascript"></script>
+    <script src="__PUBLIC__/js/mobiscroll/js/mobiscroll.scroller.android.js" type="text/javascript"></script>
+    <script src="__PUBLIC__/js/mobiscroll/js/mobiscroll.scroller.android-ics.js" type="text/javascript"></script>
+    <script src="__PUBLIC__/js/mobiscroll/js/mobiscroll.scroller.wp.js" type="text/javascript"></script>
+
+    <script src="__PUBLIC__/js/mobiscroll/js/mobiscroll.i18n.zh.js" type="text/javascript"></script>
+
+    <link href="__PUBLIC__/js/mobiscroll/css/mobiscroll.scroller.css" rel="stylesheet" type="text/css" />
+    <link href="__PUBLIC__/js/mobiscroll/css/mobiscroll.scroller.android-ics.css" rel="stylesheet" type="text/css" />
+    <link href="__PUBLIC__/js/mobiscroll/css/mobiscroll.scroller.sense-ui.css" rel="stylesheet" type="text/css" />
+
+    <script type="text/javascript" src="__PUBLIC__/js/common.js"></script>
+    <style>
+        #searchDiv {
+            width: 100%;
+            position: absolute;
+            display: none;
+            background-color: #ffffee;
+            z-index: 3;
+        }
+    </style>
+</head>
+
+<body ontouchstart>
+<section class="ui-container">
+    <header class="ui-header ui-header-positive ui-border-b" style="position: fixed; text-align: center">
+        <i class="ui-icon-search" style="float:right;font-size: 48px;" ></i>
+        <h1 id="barTitle">
+        </h1>
+    </header>
+    <div id="searchDiv" style="display: none;position: fixed;z-index: 3">
+        <div class="demo-block">
+            <div class="ui-form ui-border-t">
+                <form action="#">
+                    <div class="ui-form-item ui-border-b">
+                        <label>开始日期</label>
+                        <input type="text" id="dateBegin" style="width: 100%;" value="{$data.startTime}">
+                    </div>
+                    <div class="ui-form-item ui-border-b">
+                        <label>结束日期</label>
+                        <input type="text" id="dateEnd" style="width: 100%;" value="{$data.endTime}">
+                    </div>
+                </form>
+            </div>
+            <div class="ui-btn-group">
+                <button class="ui-btn-lg ui-btn-primary" id="okBtn">
+                    查询
+                </button>
+                <button class="ui-btn-lg" id="cancleBtn">
+                    取消
+                </button>
+            </div>
+        </div>
+    </div>
+    <div id="btnGroup" class="ui-btn-group" style="margin-top: 50px;">
+        <button class="ui-btn-lg ui-btn-primary" id="todayRFBtn">
+            今日雨量
+        </button>
+        <button class="ui-btn-lg" id="yesterdayRFBtn">
+            昨日雨量
+        </button>
+    </div>
+        <h6 style="text-align: left;padding-left: 20px;font-size: 14px;font-weight:normal;margin-top: 20px;"><b>本月累计雨量:</b><b>{$accumRainfall['YYL']}mm</b></h6>
+        <h6 style="text-align: left;padding-left: 20px;font-size: 14px;font-weight:normal;"><b>本年累计雨量:</b><b>{$accumRainfall['NYL']}mm</b></h6>
+    <div class="demo-block" id='canvasDiv' style="margin-top: -20px;"></div>
+</section><!-- /.ui-container-->
+<div id="loading-content" class="ui-loading-block" style="display:-webkit-box;">
+    <div class="ui-loading-cnt">
+        <i class="ui-loading-bright"></i>
+        <p>正在加载中...</p>
+    </div>
+</div>
+<div id= "warning" class="ui-dialog" style="display:none;">
+    <div class="ui-dialog-cnt">
+        <div class="ui-dialog-bd">
+            <h2 style="font-weight:bold;"><b>警告</b></h2>
+            <p>该时间段没有雨量数据！</p>
+        </div>
+        <div class="ui-dialog-ft">
+            <button id= "confirmBtn" type="button" data-role="button">确定</button>
+        </div>
+    </div>
+</div>
+
+<script>
+
+    $(document).ready(function(){
+        $(".ui-btn-lg").tap(function(){
+            $('.ui-btn-lg').removeClass('ui-btn-primary');
+            // $('.ui-btn-lg').addClass('ui-btn-lg');
+            var btnID = $(this).attr("id");
+            $('#'+btnID).addClass('ui-btn-primary');
+        });
+    });
+
+    $(function(){
+        // $("#canvasDiv").left(10,$(window).height() - 80);
+        $("#canvasDiv").width($(window).width());
+        $("#canvasDiv").height($(window).height() - 80);
+
+        initTm();
+        // console.log("echart version-----");
+        // console.log(echarts.version);
+
+        var today,tmFrom,tmTo;
+        var curQueryType=0;
+        today = new Date();
+        //今日雨量，从早上8点到当前查询时间
+        $('#todayRFBtn').tap(function () {
+            curQueryType = 1;
+
+            tmFrom = new Date(today.getFullYear(),today.getMonth(),today.getDate(),8,0,0).format("yyyy/MM/dd hh:mm:ss");
+            tmTo = new Date().format("yyyy/MM/dd hh:mm:ss");
+            $("#dateBegin").val(tmFrom);
+            $("#dateEnd").val(tmTo);
+            var dateBegin = $("#dateBegin").val();
+            var dateEnd = $("#dateEnd").val();
+
+            $("#barTitle").text(dateBegin.substring(5, dateBegin.length) + "~" + dateEnd.substring(5, dateEnd.length));
+            $("#searchDiv").hide();
+            // $('#yesterdayRFBtn').removeClass('ui-btn-lg ui-btn-primary');
+            // $('#yesterdayRFBtn').addClass('ui-btn-lg');
+            // $('#todayRFBtn').addClass('ui-btn-lg ui-btn-primary');
+            loadChartData();
+        });
+        //昨日8点到今日8点
+        $('#yesterdayRFBtn').tap(function () {
+
+            curQueryType = 2;
+            tmFrom = new Date(today.getFullYear(),today.getMonth(),today.getDate()-1,8,0,0).format("yyyy/MM/dd hh:mm:ss");
+            tmTo = new Date(today.getFullYear(),today.getMonth(),today.getDate(),8,0,0).format("yyyy/MM/dd hh:mm:ss");
+            $("#dateBegin").val(tmFrom);
+            $("#dateEnd").val(tmTo);
+            var dateBegin = $("#dateBegin").val();
+            var dateEnd = $("#dateEnd").val();
+
+            $("#barTitle").text(dateBegin.substring(5, dateBegin.length) + "~" + dateEnd.substring(5, dateEnd.length));
+            $("#searchDiv").hide();
+            // $('#todayRFBtn').removeClass('ui-btn-lg ui-btn-primary');
+            // $('#todayRFBtn').addClass('ui-btn-lg');
+            // $('#yesterdayRFBtn').addClass('ui-btn-lg ui-btn-primary');
+            loadChartData();
+        });
+         // $('#testTtn').tap(function () {
+        //     setQueryTime(-1);
+        // });
+
+        $('#okBtn').tap(function () {
+            curQueryType = 6;
+            var dif = getDifDays();
+            if( dif < 0){
+                $.tips({
+                    content:'开始时间不能大于结束时间',
+                    stayTime:2000,
+                    type:"warn"
+                });
+                return;
+            }
+            if( dif >= 30 ){
+                $.tips({
+                    content:'查询时间段不能超过30天',
+                    stayTime:2000,
+                    type:"warn"
+                });
+                return;
+            }
+            var dateBegin = $("#dateBegin").val();
+            var dateEnd = $("#dateEnd").val();
+            $("#barTitle").text(dateBegin.substring(5, dateBegin.length) + "~" + dateEnd.substring(5, dateBegin.length));
+            $("#searchDiv").hide();
+            loadChartData();
+            // console.log("查询任意时间段");
+        });
+        $('#cancleBtn').tap(function () {
+            $("#searchDiv").hide();
+        });
+        $('.ui-header .ui-icon-search').click(function(){
+            queryToggle();
+        });
+
+        //默认显示今日雨量曲线
+        $('#todayRFBtn').trigger('tap');
+
+        var startPosition, endPosition, deltaX, deltaY, moveLength;
+        $("#canvasDiv").bind('touchstart', function(e){
+            var touch = e.touches[0];
+            startPosition = {
+                x: touch.pageX,
+                y: touch.pageY
+            }
+        }).bind('touchmove', function(e){
+            var touch = e.touches[0];
+            endPosition = {
+                x: touch.pageX,
+                y: touch.pageY
+            };
+
+            deltaX = endPosition.x - startPosition.x;
+            deltaY = endPosition.y - startPosition.y;
+            // moveLength = Math.sqrt(Math.pow(Math.abs(deltaX), 2) + Math.pow(Math.abs(deltaY), 2));
+        }).bind('touchend', function(e){
+            //查询本月雨量，本年雨量，不允许touch
+            if (curQueryType == 3 || curQueryType == 4){
+                return;
+            }
+            if(deltaX < -70) { // 向左划动
+                deltaX = 0;
+                setQueryTime(-1);
+                //console.log("向左划动");
+            } else if (deltaX > 70) { // 向右划动
+                deltaX = 0;
+                setQueryTime(1);
+                //console.log("向右划动");
+            }
+        });
+    });
+    function setQueryTime(days){
+        var dateBegin = $("#dateBegin").val();
+        var dateEnd = $("#dateEnd").val();
+
+        var startTime = new Date(dateBegin.replace(/-/g, "/"));
+        var endTime = new Date(dateEnd.replace(/-/g, "/"));
+
+        startTime = startTime.setDate(startTime.getDate() + days);
+        endTime = endTime.setDate(endTime.getDate() + days);
+
+        var newDateBegin = new Date(startTime).format("yyyy-MM-dd hh:mm");
+        var newDateEnd = new Date(endTime).format("yyyy-MM-dd hh:mm");
+
+        $("#dateBegin").val(newDateBegin);
+        $("#dateEnd").val(newDateEnd);
+
+        $('#okBtn').trigger('tap');
+    }
+    function loadChart(chartdata) {
+        var opt;
+         var max = parseInt(chartdata.drpMax);
+        //var min = parseInt(chartdata.drpMin);
+        var chart = echarts.init(document.getElementById('canvasDiv'));
+            opt = {
+                tooltip : {
+                    trigger: 'axis',
+                    position: [10, 10],
+                    //formatter: "{b}<br/>{a}:{c} m<br/>{a1}:{c1} m"
+                    formatter: function (data) {
+
+                        var tip = "";
+//							console.log(chartdata);
+                        if (data instanceof Array && data.length > 0) {
+                            var item = chartdata.data[data[0].dataIndex];
+                            // var strLinetext = chartdata.line_text[0];
+                            // var tmTip = strLinetext.substring(0,strLinetext.length - 5);
+                            // tip = item['TIME'] + tmTip + ":" + "<br/>";
+                            tip = item['TIME'] + "<br/>";
+                            if(item["DRP"] != null){
+                                tip += item["DRP"] + "mm";
+                            }
+
+                        }else if (data instanceof Object) {
+                            // tip = data["name"] + "<br/>" + data["seriesName"] + "：" + data["value"] + " mm<br/>";
+                            tip =data["value"] + " mm<br/>";
+                        }
+                        return tip;
+                    }
+                },
+                legend: {
+                    show:true,
+                    x:'right',
+                    padding:20,
+                    data:chartdata.line_text
+                },
+                grid: {
+                    x:30,
+                    x2:30
+                },
+                toolbox: {show:false},
+                calculable : false,
+                xAxis : [
+                    {
+                        type : 'category',
+                        axisLabel :{
+                            interval:0,
+                            rotate:40
+                        },
+                        boundaryGap : false,
+                        data : chartdata.tms
+                        // splitLine: {
+                        //     show: false
+                        // }
+                    }
+                ],
+                yAxis : [
+                    {
+                        name: '降雨量(mm)',
+                        type : 'value',
+                        min :0,
+                        max : max + 10,
+                        axisLabel: {
+                            formatter:'{value}',
+                        },
+                        splitNumber:5,
+                        minInterval: 1,
+                        interval:(max + 10)/5
+                    }
+                ],
+                //  dataZoom: [
+                //     {
+                //         type: 'inside',
+                //         show: true,
+                //         realtime: true,
+                //         start: 0,
+                //         end: 50,
+                //         xAxisIndex: [0]
+                //     },
+                //     {
+                //         type: 'slider',
+                //         show: true,
+                //         start: 0,
+                //         end: 50,
+                //         handleSize: 8
+                //     },
+                // ],
+                series : [
+                    {
+                        name:chartdata.line_text[0],
+                        type:'line',
+                        //yAxisIndex:1,
+                        data:chartdata.drp,
+                        showAllSymbol: true,
+                        markPoint : {
+                            label:{
+                                normal:{
+                                    textStyle:{
+                                        color:'#fff',
+                                        fontWeight:'bold'
+                                    }
+                                }
+                            },
+                            data : chartdata.drpPoint
+                        },
+                        markLine: {
+                            data:chartdata.markLineData
+                        }
+                    }
+                ]
+            };
+            chart.clear();
+            chart.setOption(opt,true);
+    }
+    function loadChartData() {
+        chartdata = {};
+        var url = "{$data.root}/public/index.php/service/index/getRfChartData?startTime="+$("#dateBegin").val()+"&endTime="+$("#dateEnd").val();
+        var param = {};
+        $('#loading-content').css('display', '-webkit-box');
+        $.ajax({
+            url: url,
+            data: param,
+            dataType: "json",
+            success: function (data) {
+               console.log(data);
+                var markLineData;
+                var drpPoint;
+                var intvPoint;
+                var list = eval(data);
+
+                if(isEmptyObject(list)){
+                    alert("该段时间内没有雨量数据！");
+                    // $('#warning').show();
+                    // showAlert();
+                    return false;
+                }
+
+                var line_text = [];//图例名称
+
+                var drp = [],tms = [];
+                var drpMinTm,drpMaxTm;
+                var drpMin = list[0]["DRP"],drpMax = list[0]["DRP"];
+                // var intvMin = List[0]["INTV"],drpMax = List[0]["INTV"];
+
+                if(list[0]["DRP"] == null){
+                    drpMin = 0;
+                    drpMax = 0;
+                }
+
+                var newList = [];
+                line_text = ['实时雨量:mm'];
+                for (var i = 0; i < list.length; i++) {
+                    if (null != list[i]["DRP"]) {
+                        newList.push(list[i]);
+                    }
+
+                    var difDays = getDifDays();
+                    // console.log("difDays-------------");
+                    // console.log(difDays);
+
+                    // var difDays = 1;
+                    //查询时间<48小时，x轴格式：月-日 时：分
+                    //月，x轴格式：1-28/29/30/31日
+                    //年，x轴格式：1-12月
+                    if (difDays <= 2){
+                        var Hour, Minutes;
+                        var tmRainfall = new Date(list[i]["TIME"]);
+                        Hour = tmRainfall.getHours();
+                        Minutes = tmRainfall.getMinutes();
+                        //获取时间的时,分
+                        if (tmRainfall.getHours() <= 9) {
+                            Hour = "0" + tmRainfall.getHours();
+                        }
+                        if (tmRainfall.getMinutes() <= 9) {
+                            Minutes = "0" + tmRainfall.getMinutes();
+                        }
+                        if (null != list[i]["DRP"]) {
+                            //仅年份后的时间，忽略年。
+                            tms.push(list[i]["TIME"].substring(11, list[i]["TIME"].length- 3) );
+                            // console.log("tms---------");
+                            // console.log(tms);
+
+                            if (list[i]["DRP"] >= drpMax) {
+                                drpMax = list[i]["DRP"];
+                                drpMaxTm = Hour + ':' + Minutes;
+                            }
+                            if ((list[i]["DRP"] <= drpMin)) {
+                                drpMin = list[i]["DRP"];
+                                drpMinTm = Hour + ':' + Minutes;
+                            }
+                            drp.push(list[i]["DRP"]);
+                        }
+                        line_text = ['整点雨量：mm'];
+                    }else if (difDays <= 60){
+                        if (null != list[i]["DRP"]) {
+                            tms.push(list[i]["TIME"]);
+                            // console.log("tms---------");
+                            // console.log(tms);
+
+                            if (list[i]["DRP"] >= drpMax) {
+                                drpMax = list[i]["DRP"];
+                                drpMaxTm = list[i]["TIME"];
+                            }
+                            drp.push(list[i]["DRP"]);
+                        }
+                        line_text = ['日8点雨量：mm'];
+                    }else {
+                        if (null != list[i]["DRP"]) {
+                            tms.push(list[i]["TIME"]);
+                            if (list[i]["DRP"] >= drpMax) {
+                                drpMax = list[i]["DRP"];
+                                drpMaxTm = list[i]["TIME"];
+                            }
+                            drp.push(list[i]["DRP"]);
+                        }
+                        line_text = ['月平均雨量：mm'];
+                    }
+
+                    if (list.length == 0 || false) {
+                        markLineData = [];
+                        drpPoint = [];
+                        intvPoint = [];
+                    } else {
+                        // var fsltdz = 0;
+                        markLineData = [{yAxis: drpMax+ 5}];
+                        drpPoint = [
+                            {
+                                type: 'max',
+                                name: '最大降雨量',
+                                symbol: 'pin', symbolSize: [130, 35],
+                                label: {
+                                    normal: {
+                                        show: true,
+                                        formatter: drpMax + 'mm'
+                                    }
+                                },
+                                itemStyle: {
+                                    normal: {
+                                        color: 'rgba(194, 53, 49, 0.7)',
+                                        opacity: 0.7
+                                    }
+                                }
+                            }
+                        ];
+                    }
+                }
+
+                // console.log(markLineData);
+                chartdata = {
+                    drp: drp,
+                    tms: tms,
+                    drpMin: drpMin,
+                    drpMax: drpMax,
+                    drpPoint: drpPoint,
+                    markLineData: markLineData,
+                    line_text:line_text,
+                    // data: newList
+                };
+                //minMaxdata = {upzMax:upzMax, upzMin:upzMin,mintime:mintime,maxtime:maxtime};
+                //fetchTable(list,minMaxdata);
+                loadChart(chartdata);
+            },
+            complete: function (XHR, TS) {
+                //el.loading("hide");
+                $('#loading-content').css('display', 'none');
+            }
+        });
+    }
+
+    //日期初始化
+    function initTm() {
+        var opt = {
+            preset: 'datetime', //日期
+            theme: 'android-ics light', //皮肤样式
+            display: 'bottom', //显示方式
+            mode: 'scroller', //日期选择模式
+            dateFormat: 'yy-mm-dd', // 日期格式
+            timeFormat: 'HH:ii',
+            timeWheels: 'HHii',
+            dateOrder: 'yymmdd', //面板中日期排列格式
+            lang: 'zh',
+            showNow:true,
+            animate: 'slideup',
+            yearText: '年',
+            monthText: '月',
+            dayText: '日',
+            hourText: '时',
+            minuteText: '分',
+            secText: '秒'
+        };
+        $('#dateBegin').scroller('destroy').scroller(opt);
+        $('#dateEnd').scroller('destroy').scroller(opt);
+    }
+
+    function queryToggle(){
+        if($("#searchDiv").css("display") == "none"){
+            $("#searchDiv").show();
+        }else{
+            $("#searchDiv").hide();
+        }
+    }
+
+    function isEmptyObject(e) {
+        var t;
+        for (t in e)
+            return !1;
+        return !0
+    }
+    // function toggleBtn(selBtn) {
+    //     $('btnGroup').toggleClass('active');
+    //     // selBtn.toggleClass()
+    // }
+    function getDifDays() {
+
+        var dateBegin = $("#dateBegin").val();
+        var dateEnd = $("#dateEnd").val();
+        var startTime = new Date(dateBegin.replace(/-/g, "/"));
+        var endTime = new Date(dateEnd.replace(/-/g, "/"));
+        // startTime = startTime.format("yyyy-MM-dd hh:mm");
+        // endTime = endTime.format("yyyy-MM-dd hh:mm");
+         var difTm = endTime.getTime() - startTime.getTime();
+        var difDays = Math.floor(difTm / (1000 * 60 * 60 * 24));
+        return difDays;
+    }
+
+    function showAlert() {
+         // var top=$("#canvasDiv").height()/4;//让其弹出层在中间显示
+         // var left=$("#canvasDiv").width()/4;//让其弹出层在中间显示
+        // var scrollTop=$(document).scrollTop();
+        // var scrollLeft=$(document).scrollLeft();
+        // $("#warning").css({position:'absolute', 'top':top + scrollTop, 'left':left + scrollLeft}).stop().fadeIn(1000);//弹出层显示
+        // $("#warning").css({position:'absolute', 'top':top, 'left':left});//弹出层显示
+        $('#warning').show();
+        // $('#warning').fadeOut(1000);
+    }
+</script>
+</body>
+</html>

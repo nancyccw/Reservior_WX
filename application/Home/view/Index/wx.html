@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no">
+        <meta name="format-detection" content="telephone=no">
+        <title>卫星云图</title>
+        <link type="text/css" rel="stylesheet" href="__PUBLIC__/js/jquery-image-player/css/style.css" />
+        <link type="text/css" rel="stylesheet" href="__PUBLIC__/js/jquery-image-player/css/jquery-image-player-min.css" />
+        <script type="text/javascript" src="__PUBLIC__/js/jquery/jquery-2.0.3.min.js"></script>
+        <script type="text/javascript" src="__PUBLIC__/js/jquery-ui/jquery-ui.min.js"></script>
+        <script type="text/javascript" src="__PUBLIC__/js/jquery-image-player/jquery-image-player-min.js"></script>
+        <script type="text/javascript" src="__PUBLIC__/js/common.js"></script>
+		<style>
+
+		</style>
+    </head>
+    
+    <body ontouchstart>
+        <div id="uipg-video-player">
+            <ul></ul>
+        </div>
+        <script>
+            $(function () {
+                var width = $(window).width();
+                var url = 'http://www.tqyb.com.cn/data/cloud/cloud.js?random='+Math.random();
+                $.getScript(url,function () {
+                    //$('#uipg-video-player').find('ul li').remove();
+                    var count = 5;
+                    var first = true;
+                    $.each(gz_cloud.images, function (index, value) {
+                        if( gz_cloud.images.length - index <= count ) {
+                            var imgUrl = 'http://www.tqyb.com.cn/data/cloud/' + value;
+                            var duration = 1000;
+                            if (first) {
+                                first = false;
+                                duration = 0;
+                            }
+                            var time = new Date(gz_cloud.times[index]).format('yyyy-MM-dd hh:mm');
+                            $('#uipg-video-player ul').append('<li data-duration="' + duration + '">' +
+                                    '<img style="width:' + width + 'px" src="' + imgUrl + '" class="img1" />' +
+                                    '<label class="jsvp-title">'+time+'</label>' +
+                                    '</li>');
+                        }
+                    });
+                    $("#uipg-video-player").jsVideoPlayer({
+                        showTitle : false,
+                        showVolumeControl : false,
+                        onFinishGotoStart: true,
+                        playerWidth:width,
+                        playerHeight:$(window).height() - 120
+                    });
+                });
+            });
+        </script>
+    </body>
+</html>

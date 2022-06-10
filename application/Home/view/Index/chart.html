@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no">
+        <meta name="format-detection" content="telephone=no">
+        <title>{$data.bz_name}水位趋势信息</title>
+        <link rel="stylesheet" href="__PUBLIC__/js/frozenui/css/frozen.css">
+        <link rel="stylesheet" href="__PUBLIC__/css/site.css">
+        <script src="__PUBLIC__/js/frozenui/lib/zepto.min.js"></script>
+        <script src="__PUBLIC__/js/frozenui/js/frozen.js"></script>
+		<script type="text/javascript" src="__PUBLIC__/js/echart/echarts.min.js"></script>
+
+		<script type="text/javascript" src="__PUBLIC__/js/mobiscroll/js/mobiscroll.zepto.js"></script>
+		<script type="text/javascript" src="__PUBLIC__/js/mobiscroll/js/mobiscroll.core.js"></script>
+		<script type="text/javascript" src="__PUBLIC__/js/mobiscroll/js/mobiscroll.scroller.js"></script>
+
+		<script type="text/javascript" src="__PUBLIC__/js/mobiscroll/js/mobiscroll.datetime.js"></script>
+		<script type="text/javascript" src="__PUBLIC__/js/mobiscroll/js/mobiscroll.select.js"></script>
+		<script src="__PUBLIC__/js/mobiscroll/js/mobiscroll.scroller.ios.js" type="text/javascript"></script>
+		<script src="__PUBLIC__/js/mobiscroll/js/mobiscroll.scroller.android.js" type="text/javascript"></script>
+		<script src="__PUBLIC__/js/mobiscroll/js/mobiscroll.scroller.android-ics.js" type="text/javascript"></script>
+		<script src="__PUBLIC__/js/mobiscroll/js/mobiscroll.scroller.wp.js" type="text/javascript"></script>
+
+		<script src="__PUBLIC__/js/mobiscroll/js/mobiscroll.i18n.zh.js" type="text/javascript"></script>
+
+		<link href="__PUBLIC__/js/mobiscroll/css/mobiscroll.scroller.css" rel="stylesheet" type="text/css" />
+		<link href="__PUBLIC__/js/mobiscroll/css/mobiscroll.scroller.android-ics.css" rel="stylesheet" type="text/css" />
+		<link href="__PUBLIC__/js/mobiscroll/css/mobiscroll.scroller.sense-ui.css" rel="stylesheet" type="text/css" />
+
+		<script type="text/javascript" src="__PUBLIC__/js/common.js"></script>
+		<style>
+			#searchDiv {
+				width: 100%;
+				position: absolute;
+				display: none;
+				background-color: #ffffee;
+				z-index: 3;
+			}
+		</style>
+    </head>
+    
+    <body ontouchstart>
+        <section class="ui-container">
+		<header class="ui-header ui-header-positive ui-border-b" style="position: fixed; text-align: center">
+			<i class="ui-icon-search" style="float:right;font-size: 48px;" ></i>
+			<h1 id="barTitle">
+			</h1>
+		</header>
+		<div id="searchDiv" style="display: none;position: fixed;z-index: 3">
+			<div class="demo-block">
+				<div class="ui-form ui-border-t">
+					<form action="#">
+						<div class="ui-form-item ui-border-b">
+							<label>开始日期</label>
+							<input type="text" id="dateBegin" style="width: 100%;" value="{$data.startTime}">
+						</div>
+						<div class="ui-form-item ui-border-b">
+							<label>结束日期</label>
+							<input type="text" id="dateEnd" style="width: 100%;" value="{$data.endTime}">
+						</div>
+					</form>
+				</div>
+				<div class="ui-btn-group">
+					<button class="ui-btn-lg ui-btn-primary" id="okBtn">
+						查询
+					</button>
+					<button class="ui-btn-lg" id="cancleBtn">
+						取消
+					</button>
+				</div>
+			</div>
+		</div>
+		<div class="demo-block" id='canvasDiv' style="margin-top: 40px;"></div>
+        </section><!-- /.ui-container-->
+        <div id="loading-content" class="ui-loading-block" style="display:-webkit-box;">
+            <div class="ui-loading-cnt">
+                <i class="ui-loading-bright"></i>
+                <p>正在加载中...</p>
+            </div>
+        </div>
+        <script>
+		$(function(){
+		    $("#canvasDiv").width($(window).width());
+			$("#canvasDiv").height($(window).height() - 80);
+			initTm();
+			$('#okBtn').tap(function () {
+				var dateBegin = $("#dateBegin").val();
+				var dateEnd = $("#dateEnd").val();
+				var startTime = new Date((dateBegin + ":00").replace(/-/g, "/"));
+				var endTime = new Date((dateEnd + ":00").replace(/-/g, "/"));
+				var dif = endTime.getTime() - startTime.getTime();
+				var day = Math.floor(dif / (1000 * 60 * 60 * 24));
+				if( dif < 0){
+					$.tips({
+						content:'开始时间不能大于结束时间',
+						stayTime:2000,
+						type:"warn"
+					});
+					return;
+				}
+				if( day > 10 ){
+					$.tips({
+						content:'查询时间段不能超过10天',
+						stayTime:2000,
+						type:"warn"
+					});
+					return;
+				}
+				$("#barTitle").text(dateBegin.substring(5, dateBegin.length) + "~" + dateEnd.substring(5, dateBegin.length));
+				$("#searchDiv").hide();
+				loadChartData();
+			});
+			$('#cancleBtn').tap(function () {
+				$("#searchDiv").hide();
+			});
+			$('.ui-header .ui-icon-search').click(function(){
+				queryToggle();
+			});
+			$('#okBtn').trigger('tap');
+			var startPosition, endPosition, deltaX, deltaY, moveLength;
+			$("#canvasDiv").bind('touchstart', function(e){
+				var touch = e.touches[0];
+				startPosition = {
+					x: touch.pageX,
+					y: touch.pageY
+				}
+			}).bind('touchmove', function(e){
+				var touch = e.touches[0];
+				endPosition = {
+					x: touch.pageX,
+					y: touch.pageY
+				};
+
+				deltaX = endPosition.x - startPosition.x;
+				deltaY = endPosition.y - startPosition.y;
+				moveLength = Math.sqrt(Math.pow(Math.abs(deltaX), 2) + Math.pow(Math.abs(deltaY), 2));
+			}).bind('touchend', function(e){
+				if(deltaX < -70) { // 向左划动
+					deltaX = 0;
+					setQueryTime(-2);
+					//console.log("向左划动");
+				} else if (deltaX > 70) { // 向右划动
+					deltaX = 0;
+					setQueryTime(2);
+					//console.log("向右划动");
+				}
+			});
+		});
+		function setQueryTime(days){
+			var dateBegin = $("#dateBegin").val();
+			var dateEnd = $("#dateEnd").val();
+			var startTime = new Date((dateBegin + ":00").replace(/-/g, "/"));
+			var endTime = new Date((dateEnd + ":00").replace(/-/g, "/"));
+			var newDateBegin = startTime.addDate(days).format("yyyy-MM-dd hh:mm");
+			var newDateEnd = endTime.addDate(days).format("yyyy-MM-dd hh:mm");
+			$("#dateBegin").val(newDateBegin);
+			$("#dateEnd").val(newDateEnd);
+			$('#okBtn').trigger('tap');
+		}
+		function loadChart(chartdata) {
+			var opt;
+			var max = Math.max(parseInt(chartdata.njswMax),parseInt(chartdata.wjswMax));
+			var min = Math.min(parseInt(chartdata.njswMin),parseInt(chartdata.wjswMin));
+			var chart = echarts.init(document.getElementById('canvasDiv'));
+//			console.log(max+','+min);
+			if(chartdata.bz_type == 0){
+				opt = {
+					//title: {text: '水位'},
+					tooltip : {
+						trigger: 'axis',
+						position: [10, 10],
+						//formatter: "{b}<br/>{a}:{c} m<br/>{a1}:{c1} m"
+						formatter: function (data) {
+							var tip = "";
+//							console.log(chartdata);
+							if (data instanceof Array && data.length > 0) {
+								var item = chartdata.data[data[0].dataIndex];
+								tip = item['TIME'] + "<br/>";
+								if(item["NJSW"] != null){
+									tip += "内江水位：" + item["NJSW"] + " m";
+								}
+								if(item["WJSW"] != null){
+									tip +=  "外江水位：" + item["WJSW"] + " m<br/>";
+								}
+
+							}else if (data instanceof Object) {
+								tip = data["name"] + "<br/>" + data["seriesName"] + "：" + data["value"] + " m<br/>";
+							}
+							return tip;
+						}
+					},
+					legend: {
+						x:'right',
+						padding:20,
+						data:chartdata.line_text
+					},
+					grid: {
+						x:40,
+						x2:40,
+						x3:40
+					},
+					toolbox: {show:false},
+					calculable : false,
+					xAxis : [
+						{
+							type : 'category',
+							boundaryGap : false,
+							data : chartdata.tms
+						}
+					],
+					yAxis : [
+						{
+							//name: '外水位',
+							type : 'value',
+							min :min - 1,
+							max : max + 1,
+							axisLabel: {
+								formatter:'{value} m'
+							}
+						}
+					],
+					series : [
+						{
+							name:'内江水位',
+							type:'line',
+							//yAxisIndex:1,
+							data:chartdata.njsw,
+							markPoint : {
+								label:{
+									normal:{
+										textStyle:{
+											color:'#ffffff',
+											fontWeight:'bold'
+										}
+									}
+								},
+								data : chartdata.njswMarkPoint
+							},
+							markLine: {
+								data:chartdata.markLineData
+							}
+						},
+						{
+							name:'外江水位',
+							type:'line',
+							data:chartdata.wjsw,
+
+							markPoint : {
+								label:{
+									normal:{
+										textStyle:{
+											color:'#fff',
+											fontWeight:'bold'
+										}
+									}
+								},
+								data : chartdata.wjswMarkPoint
+							}
+						}
+					]
+				};
+			}else {
+				 opt = {
+//					title: {text: '水位'},
+					tooltip : {
+						trigger: 'axis',
+						position: [10, 10],
+						//formatter: "{b}<br/>{a}:{c} m<br/>{a1}:{c1} m"
+						formatter: function (data) {
+							var tip = "";
+							if (data instanceof Array && data.length > 0) {
+								var item = chartdata.data[data[0].dataIndex];
+								tip = item["TIME"] + "<br/>";
+								if(item["NJSW"] != null){
+									tip += "水池1：" + item["NJSW"] + " m";
+								}
+								if(item["WJSW"] != null){
+									tip +=  "水池2：" + item["WJSW"] + " m<br/>";
+								}
+
+							}else if (data instanceof Object) {
+								tip = data["name"] + "<br/>" + data["seriesName"] + "：" + data["value"] + " m<br/>";
+							}
+							return tip;
+						}
+					},
+					legend: {
+						x:'right',
+						padding:20,
+						data:chartdata.line_text
+					},
+					grid: {
+						x:40,
+						x2:40,
+						x3:40
+					},
+					toolbox: {show:false},
+					calculable : false,
+					xAxis : [
+						{
+							type : 'category',
+							boundaryGap : false,
+							data : chartdata.tms
+						}
+					],
+					yAxis : [
+						{
+							name: '水位值',
+							type : 'value',
+							min :min - 1,
+							max : max + 1,
+							axisLabel: {
+								formatter:'{value}m'
+							}
+						}
+					],
+					series : [
+						{
+							name:chartdata.line_text[0],
+							type:'line',
+							data:chartdata.njsw,
+							markPoint : {
+								label:{
+								normal:{
+									textStyle:{
+										color:'#fff',
+										fontWeight:'bold'
+									}
+								}
+							},
+								data : chartdata.njswMarkPoint
+							},
+							markLine: {
+								data:chartdata.markLineData
+							}
+						},
+						{
+							name:chartdata.line_text[1],
+							type:'line',
+							//yAxisIndex:1,
+							data:chartdata.wjsw,
+							markPoint : {
+								label:{
+									normal:{
+										textStyle:{
+											color:'#fff',
+											fontWeight:'bold'
+										}
+									}
+								},
+								data : chartdata.wjswMarkPoint
+							}
+						}
+					]
+				};
+			}
+
+			chart.setOption(opt);
+		}
+		function loadChartData() {
+            chartdata = {};
+            var url = "{$data.root}/public/index.php/service/index/chartData?bz_name={$data.bz_name}&startTime="+$("#dateBegin").val()+"&endTime="+$("#dateEnd").val();
+            var param = {};
+			$('#loading-content').css('display', '-webkit-box');
+            $.ajax({
+                url: url,
+                data: param,
+                dataType: "json",
+                success: function (data) {
+
+					console.log(data);
+
+
+                    var markLineData;
+                    var wjswMarkPoint;
+					var njswMarkPoint;
+                    var list = eval(data);
+					if(isEmptyObject(list)){
+						confirm("该段时间内没有水位数据！");
+						return false;
+					}
+					//内外江前池水位、时间数组
+					var bz_type;
+					var line_text = [];//图例名称
+                    var wjsw = [], njsw = [], tms = [];
+					var wjswMaxTime,wjswMinTime,njswMaxTime,njswMinTime;
+					var wjswMin = list[0]["WJSW"], wjswMax = list[0]["WJSW"];
+					var njswMin = list[0]["NJSW"], njswMax = list[0]["NJSW"];
+					bz_type = list[0]['bz_type'];
+					if(bz_type == 0){
+						line_text = ['内江水位','外江水位'];
+					}
+					if(bz_type == 1){
+						line_text = ['水池水位1','水池水位2'];
+					}
+
+					if(list[0]["WJSW"] == null){
+						wjswMin = 0;
+						wjswMax = 0;
+						if(bz_type == 0){
+							line_text = ['内江水位'];
+						}
+						if(bz_type == 1){
+							line_text = ['水池水位'];
+						}
+					}
+					var newList = [];
+//					console.log(wjswMin+','+wjswMax+','+njswMin+','+njswMax);
+                    for (var i = 0; i < list.length; i++) {
+						if(null != list[i]["NJSW"] && 0 != list[i]["NJSW"]){
+							newList.push(list[i]);
+						}
+						//时间转换
+						var Hour,Minutes;
+						var time_wjsw = new Date(list[i]["TIME"]);
+						Hour = time_wjsw.getHours();
+						Minutes = time_wjsw.getMinutes();
+						//获取时间的时,分
+						if(time_wjsw.getHours() <= 9){
+							Hour = "0"+time_wjsw.getHours();
+						}
+						if(time_wjsw.getMinutes() <= 9){
+							Minutes = "0"+time_wjsw.getMinutes();
+						}
+						if((null != list[i]["WJSW"] && 0 != list[i]["WJSW"])||
+							(null != list[i]["NJSW"] && 0 != list[i]["NJSW"])
+						){
+
+							tms.push(list[i]["TIME"].substring(5, 16));
+
+							if(list[i]["WJSW"] != null && list[i]["WJSW"] != 0){
+								if (list[i]["WJSW"] >= wjswMax ) {
+									wjswMax = list[i]["WJSW"];
+									wjswMaxTime = Hour+':'+Minutes;
+//							wjswMaxTime = list[i]["TIME"].substr(11,16);
+								}
+								if ((list[i]["WJSW"] <= wjswMin)) {
+									wjswMin = list[i]["WJSW"];
+									wjswMinTime = Hour+':'+Minutes;
+								}
+								wjsw.push(list[i]["WJSW"]);
+
+							}
+							//如果这个数组值为空，跳过，为了曲线连续
+							if(list[i]["NJSW"] != 0 && list[i]["NJSW"] != null){
+								if (list[i]["NJSW"] <= njswMin) {
+									njswMin = list[i]["NJSW"];
+									njswMinTime = Hour+':'+Minutes;
+
+								}
+								if (list[i]["NJSW"] >= njswMax) {
+									njswMax = list[i]["NJSW"];
+									njswMaxTime = Hour+':'+Minutes;
+								}
+								njsw.push(list[i]["NJSW"]);
+							}
+						}
+//						if (list[i]["QCSW"] < qcswMin) {
+//							qcswMin = list[i]["QCSW"];
+//						}
+//						if (list[i]["QCSW"] > qcswMax) {
+//							qcswMax = list[i]["QCSW"];
+//						}
+//						qcsw.push(list[i]["QCSW"]);
+                    }
+//					console.log(wjswMaxTime+','+wjswMinTime+','+njswMaxTime+','+njswMinTime);
+//					console.log(wjswMax+'，'+wjswMin+','+njswMax+','+njswMin);
+//					console.log(njsw);
+					if (list.length == 0 || false) {
+						markLineData = [];
+						wjswMarkPoint = [];
+						njswMarkPoint = [];
+					} else {
+						var fsltdz = 0;
+						markLineData = [{yAxis: 150}];
+						wjswMarkPoint = [
+										{	type: 'max',
+											name: '最高水位',
+											symbol:'pin',symbolSize:[130,35],
+											label:{
+												normal:{
+													show:true,
+													formatter: wjswMaxTime+' '+wjswMax+'m'
+												}
+											},
+											itemStyle:{
+												normal:{
+													color:'rgba(194, 53, 49, 0.7)',
+													opacity:0.7
+												}
+											}
+										},
+										{
+											type: 'min',
+											name: '最低水位',
+											symbol:'pin',symbolSize:[130,35],
+											label:{
+												normal:{
+													show:true,
+													formatter: wjswMinTime+' '+wjswMin+'m'
+												}
+											},
+											itemStyle:{
+												normal:{
+													color:'rgba(0, 0, 0, 0.7)',
+													opacity:0.7
+												}
+											}
+										}
+									];
+						njswMarkPoint = [
+							{	type: 'max',
+								name: '最高水位',
+								symbol:'pin',symbolSize:[130,35],
+								label:{
+									normal:{
+										show:true,
+										formatter: njswMaxTime+' '+njswMax+'m'
+									}
+								},
+								itemStyle:{
+									normal:{
+										color:'rgba(194, 53, 49, 0.7)',
+										opacity:0.7
+									}
+								}
+							},
+							{
+								type: 'min',
+								name: '最低水位',
+								symbol:'pin',symbolSize:[130,35],
+								label:{
+									normal:{
+										show:true,
+										formatter: njswMinTime+' '+njswMin+'m'
+									}
+								},
+								itemStyle:{
+									normal:{
+										color:'rgba(0, 0, 0, 0.7)',
+										opacity:0.7
+									}
+								}
+							}
+						];
+					}
+
+					console.log(markLineData);
+                    chartdata = {
+						bz_type:bz_type,
+                        wjsw: wjsw,
+                        njsw: njsw,
+                        tms: tms,
+                        wjswMin: wjswMin,
+                        wjswMax: wjswMax,
+                        njswMin: njswMin,
+                        njswMax: njswMax,
+						wjswMarkPoint: wjswMarkPoint,
+						njswMarkPoint: njswMarkPoint,
+                        markLineData: markLineData,
+						line_text:line_text,
+						data: newList
+                    };
+                    //minMaxdata = {upzMax:upzMax, upzMin:upzMin,mintime:mintime,maxtime:maxtime};
+                    //fetchTable(list,minMaxdata);
+                    loadChart(chartdata);
+                },
+                complete: function (XHR, TS) {
+                    //el.loading("hide");
+					$('#loading-content').css('display', 'none');
+                }
+            });
+        }
+
+		//日期初始化
+		function initTm() {
+			var opt = {
+				preset: 'datetime', //日期
+				theme: 'android-ics light', //皮肤样式
+				display: 'bottom', //显示方式
+				mode: 'scroller', //日期选择模式
+				dateFormat: 'yy-mm-dd', // 日期格式
+				timeFormat: 'HH:ii',
+				timeWheels: 'HHii',
+				dateOrder: 'yymmdd', //面板中日期排列格式
+				lang: 'zh',
+				showNow:true,
+				animate: 'slideup',
+				yearText: '年',
+				monthText: '月',
+				dayText: '日',
+				hourText: '时',
+				minuteText: '分',
+				secText: '秒'
+			};
+			$('#dateBegin').scroller('destroy').scroller(opt);
+			$('#dateEnd').scroller('destroy').scroller(opt);
+		}
+
+		function queryToggle(){
+			if($("#searchDiv").css("display") == "none"){
+				$("#searchDiv").show();
+			}else{
+				$("#searchDiv").hide();
+			}
+		}
+
+		function isEmptyObject(e) {
+			var t;
+			for (t in e)
+				return !1;
+			return !0
+		}
+		</script>
+    </body>
+</html>

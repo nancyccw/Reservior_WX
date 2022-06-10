@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no">
+    <meta name="format-detection" content="telephone=no">
+    <title>水库水位</title>
+    <link rel="stylesheet" href="__PUBLIC__/js/frozenui/css/frozen.css">
+    <link rel="stylesheet" href="__PUBLIC__/css/site.css">
+    <script src="__PUBLIC__/js/frozenui/lib/zepto.min.js"></script>
+    <script src="__PUBLIC__/js/frozenui/js/frozen.js"></script>
+    <script type="text/javascript" src="__PUBLIC__/js/echart/echarts.min.js"></script>
+
+    <script type="text/javascript" src="__PUBLIC__/js/mobiscroll/js/mobiscroll.zepto.js"></script>
+    <script type="text/javascript" src="__PUBLIC__/js/mobiscroll/js/mobiscroll.core.js"></script>
+    <script type="text/javascript" src="__PUBLIC__/js/mobiscroll/js/mobiscroll.scroller.js"></script>
+
+    <script type="text/javascript" src="__PUBLIC__/js/mobiscroll/js/mobiscroll.datetime.js"></script>
+    <script type="text/javascript" src="__PUBLIC__/js/mobiscroll/js/mobiscroll.select.js"></script>
+    <script src="__PUBLIC__/js/mobiscroll/js/mobiscroll.scroller.ios.js" type="text/javascript"></script>
+    <script src="__PUBLIC__/js/mobiscroll/js/mobiscroll.scroller.android.js" type="text/javascript"></script>
+    <script src="__PUBLIC__/js/mobiscroll/js/mobiscroll.scroller.android-ics.js" type="text/javascript"></script>
+    <script src="__PUBLIC__/js/mobiscroll/js/mobiscroll.scroller.wp.js" type="text/javascript"></script>
+
+    <script src="__PUBLIC__/js/mobiscroll/js/mobiscroll.i18n.zh.js" type="text/javascript"></script>
+
+    <link href="__PUBLIC__/js/mobiscroll/css/mobiscroll.scroller.css" rel="stylesheet" type="text/css" />
+    <link href="__PUBLIC__/js/mobiscroll/css/mobiscroll.scroller.android-ics.css" rel="stylesheet" type="text/css" />
+    <link href="__PUBLIC__/js/mobiscroll/css/mobiscroll.scroller.sense-ui.css" rel="stylesheet" type="text/css" />
+
+    <script type="text/javascript" src="__PUBLIC__/js/common.js"></script>
+</head>
+
+<body ontouchstart>
+<section class="ui-container">
+    <header class="ui-header ui-header-positive ui-border-b" style="position: fixed; text-align: center">
+        <h1>近一月水位库容曲线</h1>
+    </header>
+    <div class="demo-block" id='canvasDiv' style="margin-top: 80px;"></div>
+</section><!-- /.ui-container-->
+<div id="loading-content" class="ui-loading-block" style="display:-webkit-box;">
+    <div class="ui-loading-cnt">
+        <i class="ui-loading-bright"></i>
+        <p>正在加载中...</p>
+    </div>
+</div>
+<script>
+    $(function(){
+        // $("#canvasDiv").left(10,$(window).height() - 80);
+        $("#canvasDiv").width($(window).width());
+        $("#canvasDiv").height($(window).height() - 80);
+
+        loadChartData();
+    });
+
+    function loadChart(chartdata) {
+        var opt;
+        // var max = parseInt(chartdata.drpMax);
+        //var min = parseInt(chartdata.drpMin);
+        var chart = echarts.init(document.getElementById('canvasDiv'));
+        //水位库容最大刻度，可调整
+        var SWMax = 30;
+        var KRMax = 5000;
+
+        opt = {
+            tooltip : {
+                trigger: 'axis',
+                position: [10, 10],
+                formatter: function (data) {
+                    var tip = "";
+                    if (data instanceof Array && data.length > 0) {
+                        var item = chartdata.data[data[0].dataIndex];
+                        tip = item['TIME'] + "<br/>";
+                        if(item["SW"] != null){
+                            tip += "水位:" + item["SW"] + "m<br/>";
+                        }
+                        if(item["KR"] != null){
+                            tip += "库容:" + item["KR"] + "万m³";
+                        }
+                    }else if (data instanceof Object) {
+                        tip = data["name"] + "<br/>" + data["seriesName"] + "：" + data["value"] + " m<br/>";
+                    }
+                    return tip;
+                }
+            },
+             legend: {
+                show:true,
+                x:'center',
+                padding:20,
+                data:chartdata.line_text
+            },
+            grid: {
+                x:30,
+                x2:50
+            },
+            toolbox: {show:false},
+            calculable : false,
+            xAxis : [
+                {
+                    type : 'category',
+                    axisLabel :{
+                        interval:0,
+                        rotate:40
+                    },
+                    boundaryGap : false,
+                    data : chartdata.tms
+                }
+            ],
+            yAxis : [
+                {
+                    name: '水位',
+                    type : 'value',
+                    min :0,
+                    max : SWMax,
+                    axisLabel: {
+                        formatter:'{value}',
+                    },
+                    splitNumber:5,
+                    interval:SWMax/5
+                }
+                ,
+                {
+                    name: '库容',
+                    type : 'value',
+                    min :0,
+                    max : KRMax,
+                    axisLabel: {
+                        formatter:'{value}',
+                    },
+                    splitNumber:5,
+                    interval:KRMax/5
+                }
+            ],
+            series : [
+                {
+                    name:chartdata.line_text[0],
+                    type:'line',
+                    data:chartdata.waterList,
+                    showAllSymbol: true,
+                    markPoint : {
+                        label:{
+                            normal:{
+                                textStyle:{
+                                    color:'#fff',
+                                    fontWeight:'bold'
+                                }
+                            }
+                        },
+                        data : chartdata.waterPoint
+                    }
+                }
+                ,
+                {
+                    name:chartdata.line_text[1],
+                    type:'line',
+                    data:chartdata.capatityList,
+                    showAllSymbol: true,
+                    markPoint : {
+                        label:{
+                            normal:{
+                                textStyle:{
+                                    color:'#fff',
+                                    fontWeight:'bold'
+                                }
+                            }
+                        },
+                        data : chartdata.KRPoint
+                    },
+                    yAxisIndex:1
+                }
+            ]
+        };
+        chart.clear();
+        chart.setOption(opt,true);
+    }
+    function loadChartData() {
+        chartdata = {};
+        var url = "{$info.root}/public/index.php/service/index/getReserviorWater";
+        var param = {};
+        $('#loading-content').css('display', '-webkit-box');
+        $.ajax({
+            url: url,
+            data: param,
+            dataType: "json",
+            success: function (data) {
+                console.log(data);
+                var markLineData;
+                var waterPoint;
+                var KRPoint;
+                var list = eval(data);
+
+                if(isEmptyObject(list)){
+                    alert("该段时间内没有水位库容数据！");
+                    return false;
+                }
+
+                var line_text = ['水位(m)','库容(万m³)'];//图例名称
+                var tms = [];
+                var waterMaxTm, capatityMaxTM;
+                var waterMax = list[0]["SW"];
+                var capacityMax = list[0]["KR"];
+                var waterList = [],capatityList = [];
+                var tooltipData=[];
+
+                for (var i = 0; i < list.length; i++) {
+                    if(null != list[i]["SW"] && 0 != list[i]["KR"]){
+                        tooltipData.push(list[i]);
+                    }
+                    if (null != list[i]["SW"]) {
+                        waterList.push(list[i]["SW"]);
+                    }
+                    if (null != list[i]["KR"]) {
+                        capatityList.push(list[i]["KR"]);
+                    }
+                        if (null != list[i]["SW"]) {
+                            tms.push(list[i]["TIME"]);
+
+                            if (list[i]["SW"] >= waterMax) {
+                                waterMax = list[i]["SW"];
+                                waterMaxTm = list[i]["TIME"];
+                            }
+                            if (list[i]["KR"] >= capacityMax) {
+                                capacityMax = list[i]["KR"];
+                                capatityMaxTM = list[i]["TIME"];
+                            }
+                        }
+
+                    if (list.length == 0 || false) {
+                        markLineData = [];
+                        waterList=[];
+                        capatityList=[];
+                    } else {
+                        markLineData = [{yAxis: waterMax}];
+                        waterPoint = [
+                            {
+                                type: 'max',
+                                name: '最大水位',
+                                symbol: 'pin', symbolSize: [130, 35],
+                                label: {
+                                    normal: {
+                                        show: true,
+                                        formatter: waterMax + 'm'
+                                    }
+                                },
+                                itemStyle: {
+                                    normal: {
+                                        color: 'rgba(194, 53, 49, 0.7)',
+                                        opacity: 0.7
+                                    }
+                                }
+                            }
+                        ];
+                        KRPoint =[
+                            {
+                                type: 'max',
+                                name: '最大库容',
+                                symbol: 'pin', symbolSize: [130, 35],
+                                label: {
+                                    normal: {
+                                        show: true,
+                                        formatter: capacityMax + '万m³'
+                                    }
+                                },
+                                itemStyle: {
+                                    normal: {
+                                        color:'rgba(0, 0, 0, 0.7)',
+                                        opacity: 0.7
+                                    }
+                                }
+                            }
+                        ];
+                    }
+                    // console.log(waterList[i]);
+                    // console.log(capatityList[i]);
+                 }
+
+                chartdata = {
+                    waterList: waterList,
+                    capatityList:capatityList,
+                    tms: tms,
+                    waterMax: waterMax,
+                    capacityMax:capacityMax,
+                    waterMaxTm:waterMaxTm,
+                    capatityMaxTM:capatityMaxTM,
+                    // markLineData: markLineData,
+                    line_text:line_text,
+                    waterPoint:waterPoint,
+                    KRPoint:KRPoint,
+                    data:tooltipData
+                };
+                loadChart(chartdata);
+            },
+            complete: function (XHR, TS) {
+                //el.loading("hide");
+                $('#loading-content').css('display', 'none');
+            }
+        });
+    }
+
+    //日期初始化
+    function initTm() {
+        var opt = {
+            preset: 'datetime', //日期
+            theme: 'android-ics light', //皮肤样式
+            display: 'bottom', //显示方式
+            mode: 'scroller', //日期选择模式
+            dateFormat: 'yy-mm-dd', // 日期格式
+            timeFormat: 'HH:ii',
+            timeWheels: 'HHii',
+            dateOrder: 'yymmdd', //面板中日期排列格式
+            lang: 'zh',
+            showNow:true,
+            animate: 'slideup',
+            yearText: '年',
+            monthText: '月',
+            dayText: '日',
+            hourText: '时',
+            minuteText: '分',
+            secText: '秒'
+        };
+    }
+    function isEmptyObject(e) {
+        var t;
+        for (t in e)
+            return !1;
+        return !0
+    }
+
+</script>
+</body>
+</html>

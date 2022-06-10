@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no">
+    <meta name="format-detection" content="telephone=no">
+    <title>大坝渗压浸润线</title>
+    <link rel="stylesheet" href="__PUBLIC__/js/frozenui/css/frozen.css">
+    <link rel="stylesheet" href="__PUBLIC__/css/site.css">
+    <script src="__PUBLIC__/js/frozenui/lib/zepto.min.js"></script>
+    <script src="__PUBLIC__/js/frozenui/js/frozen.js"></script>
+    <script type="text/javascript" src="__PUBLIC__/js/echart/echarts.min.js"></script>
+
+    <script type="text/javascript" src="__PUBLIC__/js/mobiscroll/js/mobiscroll.zepto.js"></script>
+    <script type="text/javascript" src="__PUBLIC__/js/mobiscroll/js/mobiscroll.core.js"></script>
+    <script type="text/javascript" src="__PUBLIC__/js/mobiscroll/js/mobiscroll.scroller.js"></script>
+
+    <script type="text/javascript" src="__PUBLIC__/js/mobiscroll/js/mobiscroll.datetime.js"></script>
+    <script type="text/javascript" src="__PUBLIC__/js/mobiscroll/js/mobiscroll.select.js"></script>
+    <script src="__PUBLIC__/js/mobiscroll/js/mobiscroll.scroller.ios.js" type="text/javascript"></script>
+    <script src="__PUBLIC__/js/mobiscroll/js/mobiscroll.scroller.android.js" type="text/javascript"></script>
+    <script src="__PUBLIC__/js/mobiscroll/js/mobiscroll.scroller.android-ics.js" type="text/javascript"></script>
+    <script src="__PUBLIC__/js/mobiscroll/js/mobiscroll.scroller.wp.js" type="text/javascript"></script>
+
+    <script src="__PUBLIC__/js/mobiscroll/js/mobiscroll.i18n.zh.js" type="text/javascript"></script>
+
+    <link href="__PUBLIC__/js/mobiscroll/css/mobiscroll.scroller.css" rel="stylesheet" type="text/css" />
+    <link href="__PUBLIC__/js/mobiscroll/css/mobiscroll.scroller.android-ics.css" rel="stylesheet" type="text/css" />
+    <link href="__PUBLIC__/js/mobiscroll/css/mobiscroll.scroller.sense-ui.css" rel="stylesheet" type="text/css" />
+
+    <script type="text/javascript" src="__PUBLIC__/js/common.js"></script>
+</head>
+
+<body ontouchstart>
+<section class="ui-container">
+    <div id="btnGroup" class="ui-btn-group" style="margin-top: 50px;">
+        <button class="ui-btn-lg ui-btn-primary" id="surfaceBtn1">
+            断面I
+        </button>
+        <button class="ui-btn-lg" id="surfaceBtn2">
+            断面II
+        </button>
+        <button class="ui-btn-lg" id="surfaceBtn3">
+            断面III
+        </button>
+    </div>
+    <div class="demo-block" id='canvasDiv' style="margin-top: 50px;"></div>
+</section><!-- /.ui-container-->
+<div id="loading-content" class="ui-loading-block" style="display:-webkit-box;">
+    <div class="ui-loading-cnt">
+        <i class="ui-loading-bright"></i>
+        <p>正在加载中...</p>
+    </div>
+</div>
+<script>
+
+    $(document).ready(function(){
+        $(".ui-btn-lg").tap(function(){
+            $('.ui-btn-lg').removeClass('ui-btn-primary');
+            var btnID = $(this).attr("id");
+            $('#'+btnID).addClass('ui-btn-primary');
+        });
+    });
+
+    var surfaceName ="断面I";
+    var surface = 1;
+    $(function(){
+        // $("#canvasDiv").left(10,$(window).height() - 80);
+        $("#canvasDiv").width($(window).width());
+        $("#canvasDiv").height($(window).height()*0.5);
+
+        $('#surfaceBtn1').tap(function () {
+            surfaceName ="断面I";
+            surface = 1;
+            loadChartData();
+        });
+
+        $('#surfaceBtn2').tap(function () {
+            surfaceName ="断面II";
+            surface = 2;
+            loadChartData();
+        });
+
+        $('#surfaceBtn3').tap(function () {
+            surfaceName ="断面III";
+            surface = 3;
+            loadChartData();
+        });
+
+        $('#surfaceBtn1').trigger('tap');
+    });
+
+    function loadChart(chartdata) {
+        var opt;
+        var chart = echarts.init(document.getElementById('canvasDiv'));
+
+        var damWidth = {$damParam['damWidth']};
+        var damHeight = {$damParam['damHeight']};
+        var designFL = {$damParam['designFL']};
+        var pressureData = chartdata.pressureData;
+        var polyPoints = [];
+        //坝底高程
+        var damBottomHeight = 13.3;
+        var damX = [
+            {$damParam['damProfile']['x0']},
+            {$damParam['damProfile']['x1']},
+            {$damParam['damProfile']['x2']},
+            {$damParam['damProfile']['x3']},
+            {$damParam['damProfile']['x4']},
+            {$damParam['damProfile']['x5']},
+            {$damParam['damProfile']['x6']},
+            {$damParam['damProfile']['x7']},
+            {$damParam['damProfile']['x8']}
+        ];
+        var damY = [
+            {$damParam['damProfile']['y0']},
+            {$damParam['damProfile']['y1']},
+            {$damParam['damProfile']['y2']},
+            {$damParam['damProfile']['y3']},
+            {$damParam['damProfile']['y4']},
+            {$damParam['damProfile']['y5']},
+            {$damParam['damProfile']['y6']},
+            {$damParam['damProfile']['y7']},
+            {$damParam['damProfile']['y8']}
+        ];
+        var piezometer_fracture =[
+                {$piezometerParam['p1_left']},
+                {$piezometerParam['p1_bottom']},
+                {$piezometerParam['p1_right']},
+                {$piezometerParam['p1_top']},
+                {$piezometerParam['p2_left']},
+                {$piezometerParam['p2_bottom']},
+                {$piezometerParam['p2_right']},
+                {$piezometerParam['p2_top']},
+                {$piezometerParam['p3_left']},
+                {$piezometerParam['p3_bottom']},
+                {$piezometerParam['p3_right']},
+                {$piezometerParam['p3_top']},
+                {$piezometerParam['p4_left']},
+                {$piezometerParam['p4_bottom']},
+                {$piezometerParam['p4_right']},
+                {$piezometerParam['p4_top']}
+            ];
+        var pressureName = [];
+        if (surface == 1){
+            pressureName = ["C12","C11","C10","C9"];
+        }else if (surface == 2){
+            pressureName = ["C8","C7","C6","C5"];
+        }else if (surface == 3){
+            pressureName = ["C4","C3","C2","C1"];
+        }
+
+        opt = {
+            title: {
+                text: "断面监测图",
+                left: "center",
+                top: "bottom",
+                textStyle: {
+                    fontSize: 30
+                    }
+                },
+             grid: {
+                x:40,
+                x2:0
+            },
+            toolbox: {show:false},
+            calculable : false,
+            xAxis : [
+                {
+                    type : 'value',
+                    axisLabel :{
+                        show:false
+                    },
+                    axisTick: {
+                        show: false
+                    },
+                    splitLine: {
+                        show: false
+                    },
+                    min:0,
+                    max:damWidth
+                }
+            ],
+            yAxis : [
+                {
+                    name: '断面高(m)',
+                    type : 'value',
+                    min :damBottomHeight,
+                    scale:true,
+                    max : damHeight + 3.4,
+                    axisLabel: {
+                        formatter:'{value}',
+                    },
+                    splitLine: {
+                        show: false
+                    },
+                    splitNumber:5,
+                    interval:(damHeight + 3.4 -damBottomHeight)/5
+                }
+            ],
+            series : [
+                {
+                    name:"大坝轮廓",
+                    type:'line',
+                    symbol: "none",
+                    data: [
+                        [damX[0],damY[0]],
+                        [damX[1],damY[1]],
+                        [damX[2],damY[2]],
+                        [damX[3],damY[3]],
+                        [damX[4],damY[4]],
+                        [damX[5],damY[5]],
+                        [damX[6],damY[6]],
+                        [damX[7],damY[7]],
+                        [damX[8],damY[8]]
+                    ],
+                    areaStyle: {
+                        normal: {
+                            color: {
+                                type: 'linear',
+                                x: 0,
+                                y: 0,
+                                x2: 0,
+                                y2: 1,
+                                colorStops: [{
+                                    offset: 0, color: 'rgba(245,238,188,0.7)',
+
+                                }, {
+                                    offset: 1, color: 'rgba(161,152,37,0.7)',
+
+                                }],
+
+                                globalCoord: false // 缺省为 false
+
+                            },
+                        }
+                    },
+                    lineStyle: {
+                        color: "rgb(9,9,9)"
+                    }
+                },
+                {
+                    name:"设计水位",
+                    type:'line',
+                    symbol: "none",
+                    data: [
+                        [0,designFL],
+                        [((designFL - 13.3)*33.9/13.3),designFL]
+
+                    ],
+                    lineStyle: {
+                        color: "rgb(4,84,245)",
+                        shadowBlur: 10,
+                        type: "dashed"
+                    },
+                    markPoint: {
+                        data: [{
+                            type: "max",
+                            x: "15%"
+                        }],
+                        symbol: 'pin', symbolSize: [60, 35],
+                        label: {
+                            normal: {
+                                show: true,
+                                textStyle:{
+                                    color:'#fff',
+                                    fontWeight:'bold'
+                                },
+                                formatter: designFL + 'm'
+                            }
+                        },
+                        itemStyle: {
+                            color:'rgba(194, 53, 49, 0.7)'
+                        }
+                    }
+                },
+                {
+                    name:"当前水位",
+                    type: "custom",
+                    renderItem: function (params, api) {
+                        polyPoints.push(api.coord([api.value(0), api.value(1)]));
+                        var start = api.coord([0, chartdata.waterLevel]);
+
+                        return {
+                            type: 'group',
+                            children: [{
+                                type: 'polygon',
+                                shape: {
+                                    points: echarts.graphic.clipPointsByRect(polyPoints, {
+                                        x: params.coordSys.x,
+                                        y: params.coordSys.y,
+                                        width: params.coordSys.width,
+                                        height: params.coordSys.height
+                                    })
+                                },
+                                style: api.style({
+                                    fill: "rgb(37,183,239)",
+                                    stroke: 'transparent'
+                                })
+                            }, {
+                                type: 'text',
+                                style:{
+                                    text:chartdata.waterLevel+"m" ,
+                                    x:start[0]+ 10,
+                                    y:start[1]+10
+                                }
+                            }]
+                        };
+
+                    },
+                    data:[
+                        [0,13.3],
+                        [((chartdata.waterLevel - 13.3)*33.9/13.3),chartdata.waterLevel],
+                        [0,chartdata.waterLevel]
+                    ]
+                },
+                {
+                    name:"测压管轮廓",
+                    type: "custom",
+                    renderItem: function (params, api) {
+                        // var categoryIndex = api.value(0);
+                        var start = api.coord([api.value(0), api.value(1)]);
+                        var end = api.coord([api.value(2), api.value(3)]);
+                        var height = api.size([0, 1])[1] * (api.value(3) - api.value(1));
+
+                        var rectShape = echarts.graphic.clipRectByRect({
+                            x: start[0],
+                            y: end[1],
+                            width: end[0] - start[0],
+                            height: height
+                        }, {
+                            x: params.coordSys.x,
+                            y: params.coordSys.y,
+                            width: params.coordSys.width,
+                            height: params.coordSys.height
+                        });
+
+                        return {
+                            type: 'group',
+                            children: [{
+                                type: 'rect',
+                                shape: rectShape,
+                                style: api.style({fill: 'transparent', stroke: 'black'})
+                            }, {
+                                type: 'line',
+                                shape: {
+                                    x1:start[0],y1:end[1],x2:start[0] + 50,y2:end[1]
+                                },
+                                style: api.style({stroke: 'black'})
+                            }, {
+                                type: 'text',
+                                style:{
+                                    text:api.value(3)+'m',
+                                    x:start[0] + 5,
+                                    y:end[1]-10
+                                }
+                            }, {
+                                type: 'text',
+                                style:{
+                                    text:pressureName[params.dataIndex],
+                                    x:start[0] - 25,
+                                    y:start[1]-10
+                                }
+                            }]
+                        };
+                    },
+                    encode: {
+                        x: [1, 3],      // 表示维度 3、1 映射到 x 轴。
+                        y: [2, 4]       // 表示维度 2、4 映射到 y 轴。
+                    },
+                    data: [
+                        [piezometer_fracture[0],piezometer_fracture[1],piezometer_fracture[2],piezometer_fracture[3]],
+                        [piezometer_fracture[4],piezometer_fracture[5],piezometer_fracture[6],piezometer_fracture[7]],
+                        [piezometer_fracture[8],piezometer_fracture[9],piezometer_fracture[10],piezometer_fracture[11]],
+                        [piezometer_fracture[12],piezometer_fracture[13],piezometer_fracture[14],piezometer_fracture[15]]
+                    ]
+                },
+                {
+                    name:"渗压",
+                    type: "custom",
+                    renderItem: function (params, api) {
+                        // var categoryIndex = api.value(0);
+                        var start = api.coord([api.value(0), api.value(1)]);
+                        var end = api.coord([api.value(2), api.value(3)]);
+                        var height = api.size([0, 1])[1] * (api.value(3) - api.value(1));
+
+                        var rectShape = echarts.graphic.clipRectByRect({
+                            x: start[0],
+                            y: end[1],
+                            width: end[0] - start[0],
+                            height: height
+                        }, {
+                            x: params.coordSys.x,
+                            y: params.coordSys.y,
+                            width: params.coordSys.width,
+                            height: params.coordSys.height
+                        });
+
+                        return {
+                            type: 'group',
+                            children: [{
+                                type: 'rect',
+                                shape: rectShape,
+                                style: api.style({
+                                    fill: "rgb(37,183,239)",
+                                    stroke: 'transparent'
+                                })
+                            }, {
+                                type: 'text',
+                                style:{
+                                    text:api.value(3)+'m',
+                                    x:start[0] - 30,
+                                    y:end[1]-10
+                                }
+                            }]
+                        };
+                    },
+                    encode: {
+                        x: [1, 3],      // 表示维度 3、1 映射到 x 轴。
+                        y: [2, 4]       // 表示维度 2、4 映射到 y 轴。
+                    },
+                    data: [
+                        [piezometer_fracture[0],piezometer_fracture[1],piezometer_fracture[2],pressureData[0]],
+                        [piezometer_fracture[4],piezometer_fracture[5],piezometer_fracture[6],pressureData[1]],
+                        [piezometer_fracture[8],piezometer_fracture[9],piezometer_fracture[10],pressureData[2]],
+                        [piezometer_fracture[12],piezometer_fracture[13],piezometer_fracture[14],pressureData[3]]
+                    ]
+                },
+                {
+                    name:"浸润线",
+                    type:'line',
+                    symbol: "none",
+                    smooth:0.4,
+                    data: [
+                        [((chartdata.waterLevel - 13.3)*33.9/13.3),chartdata.waterLevel],
+                        [piezometer_fracture[0],pressureData[0]],
+                        [piezometer_fracture[4],pressureData[1]],
+                        [piezometer_fracture[8],pressureData[2]],
+                        [piezometer_fracture[12],pressureData[3]]
+                    ],
+                    lineStyle: {
+                        color: "rgb(45,226,5)",
+                        type: "solid"
+                    }
+                }
+            ]
+        };
+        chart.clear();
+        chart.setOption(opt,true);
+    }
+    function loadChartData() {
+        chartdata = {};
+        var url = "{$info.root}/public/index.php/service/index/getDamSaturationLine?surface="+surface;
+        var param = {};
+        $('#loading-content').css('display', '-webkit-box');
+        $.ajax({
+            url: url,
+            data: param,
+            dataType: "json",
+            success: function (data) {
+
+                var list = eval(data);
+                var waterLevel = 0;
+                var pressureData = [];
+
+                if(isEmptyObject(list)){
+                    alert("读取渗压数据失败！");
+                    return false;
+                }
+
+                if (list[0]["waterlevel"] != null){
+                    waterLevel = list[0]["waterlevel"];
+                }
+                if (list[0]["pipe1_pressure"] != null &&
+                    list[0]["pipe2_pressure"] != null &&
+                    list[0]["pipe3_pressure"] != null &&
+                    list[0]["pipe4_pressure"] != null){
+                    pressureData.push(list[0]["pipe1_pressure"]);
+                    pressureData.push(list[0]["pipe2_pressure"]);
+                    pressureData.push(list[0]["pipe3_pressure"]);
+                    pressureData.push(list[0]["pipe4_pressure"]);
+                }
+
+                chartdata = {
+                    waterLevel:waterLevel,
+                    pressureData:pressureData
+                };
+
+                loadChart(chartdata);
+            },
+            complete: function (XHR, TS) {
+                 $('#loading-content').css('display', 'none');
+            }
+        });
+    }
+
+    //日期初始化
+    function initTm() {
+        var opt = {
+            preset: 'datetime', //日期
+            theme: 'android-ics light', //皮肤样式
+            display: 'bottom', //显示方式
+            mode: 'scroller', //日期选择模式
+            dateFormat: 'yy-mm-dd', // 日期格式
+            timeFormat: 'HH:ii',
+            timeWheels: 'HHii',
+            dateOrder: 'yymmdd', //面板中日期排列格式
+            lang: 'zh',
+            showNow:true,
+            animate: 'slideup',
+            yearText: '年',
+            monthText: '月',
+            dayText: '日',
+            hourText: '时',
+            minuteText: '分',
+            secText: '秒'
+        };
+    }
+    function isEmptyObject(e) {
+        var t;
+        for (t in e)
+            return !1;
+        return !0
+    }
+
+</script>
+</body>
+</html>
